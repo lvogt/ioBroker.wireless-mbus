@@ -5,6 +5,8 @@ on:
     branches:
       - "master"
   pull_request:
+  release:
+    types: [published]
 
 jobs:
   # Performs quick checks before the expensive test runs
