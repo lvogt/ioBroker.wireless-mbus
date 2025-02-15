@@ -67,45 +67,6 @@
         "pl": "Zaimplementuj połączenie szeregowe przez TCP; aktualizacja do portu szeregowego 11; wymagany jest co najmniej węzeł v14!",
         "uk": "Реалізація послідовного порту TCP; оновлення до послідовного порту 11; потрібен принаймні вузол v14!",
         "zh-cn": "通过TCP实现串行；升级到串口11；至少需要节点 v14！"
-      },
-      "0.8.10": {
-        "en": "Use compact frame cache independently from manufacturer code",
-        "de": "Cache für Kompakttelegramme wird unabhängig vom Hersteller verwendet",
-        "ru": "Используйте компактный кэш кадров независимо от кода производителя.",
-        "pt": "Use cache de quadro compacto independentemente do código do fabricante",
-        "nl": "Gebruik compacte framecache onafhankelijk van de fabrikantcode",
-        "fr": "Utiliser le cache de trame compact indépendamment du code du fabricant",
-        "it": "Utilizza la cache dei frame compatta indipendentemente dal codice del produttore",
-        "es": "Utilice caché de fotogramas compacto independientemente del código del fabricante",
-        "pl": "Używaj kompaktowej pamięci podręcznej ramki niezależnie od kodu producenta",
-        "uk": "Використовуйте компактний кеш кадрів незалежно від коду виробника",
-        "zh-cn": "独立于制造商代码使用紧凑帧缓存"
-      },
-      "0.8.9": {
-        "en": "Fix display of non-default settings in admin page",
-        "de": "Korrekter der Anzeige mancher Werte in der AdminUI",
-        "ru": "Исправлено отображение нестандартных настроек на странице администратора.",
-        "pt": "Corrigida a exibição de configurações não padrão na página de administração",
-        "nl": "Weergave van niet-standaardinstellingen op de beheerderspagina opgelost",
-        "fr": "Correction de l'affichage des paramètres autres que ceux par défaut dans la page d'administration",
-        "it": "Corretta la visualizzazione delle impostazioni non predefinite nella pagina di amministrazione",
-        "es": "Se corrigió la visualización de configuraciones no predeterminadas en la página de administración",
-        "pl": "Napraw wyświetlanie ustawień innych niż domyślne na stronie administratora",
-        "uk": "Виправлено відображення нестандартних налаштувань на сторінці адміністратора",
-        "zh-cn": "修复管理页面中非默认设置的显示"
-      },
-      "0.8.8": {
-        "en": "Add datetime type I handling",
-        "de": "Unterstützung für Typ I Zeitstempel",
-        "ru": "Добавить обработку даты и времени типа I",
-        "pt": "Adicionar tratamento de data e hora tipo I",
-        "nl": "Voeg datetime type I-verwerking toe",
-        "fr": "Ajouter la gestion datetime type I",
-        "it": "Aggiungi la gestione del tipo I di data e ora",
-        "es": "Agregar manejo de fecha y hora tipo I",
-        "pl": "Dodaj obsługę typu datetime I",
-        "uk": "Додайте обробку типу дата-час I",
-        "zh-cn": "添加日期时间类型 I 处理"
       }
     },
     "titleLang": {
