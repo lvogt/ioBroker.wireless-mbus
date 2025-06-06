@@ -4,17 +4,17 @@
     "version": "0.10.1",
     "news": {
       "0.10.1": {
-        "en": "Fix SLIP encoder used by IMST iU891A-XL; dropped support for node 18",
-        "de": "Korrektur des SLIP Encoders für IMST iU891A-XL; Support für node 18 entfernt",
-        "ru": "Fix Slip Encoder, используемый IMST IU891A-XL; Униженная поддержка узла 18",
-        "pt": "Corrigir o codificador de deslizamento usado pelo IMST IU891A-XL; Dropou o suporte para o nó 18",
-        "nl": "Fix Slip Encoder gebruikt door IMST IU891A-XL; Ondersteuning voor knooppunt 18 laten vallen",
-        "fr": "Correction de l'encodeur de glissement utilisé par IMST IU891A-XL; Support abandonné pour le nœud 18",
-        "it": "Fix Slip Encoder usato da IMST IU891A-XL; Supporto abbandonato per il nodo 18",
-        "es": "Corrección de codificador de deslizamiento utilizado por IMST IU891A-XL; Soporte descartado para el nodo 18",
-        "pl": "Fix Slip Encoder używany przez IMST IU891A-XL; Upuściłem wsparcie dla węzła 18",
-        "uk": "Виправити кодер ковзання, який використовується IMST IU891A-XL; скинута підтримка вузла 18",
-        "zh-cn": "修复IMST IU891A-XL使用的固定滑动编码器；放弃对节点18的支持"
+        "en": "Fix SLIP encoder used by IMST iU891A-XL",
+        "de": "Korrektur des SLIP Encoders für IMST iU891A-XL",
+        "ru": "Fix Slip Encoder, используемый IMST IU891A-XL",
+        "pt": "Corrigir o codificador de deslizamento usado pelo IMST IU891A-XL",
+        "nl": "Fix Slip Encoder gebruikt door IMST IU891A-XL",
+        "fr": "Correction de l'encodeur de glissement utilisé par IMST IU891A-XL",
+        "it": "Fix Slip Encoder usato da IMST IU891A-XL",
+        "es": "Corrección de codificador de deslizamiento utilizado por IMST IU891A-XL",
+        "pl": "Fix Slip Encoder używany przez IMST IU891A-XL",
+        "uk": "Виправити кодер ковзання, який використовується IMST IU891A-XL",
+        "zh-cn": "修复IMST IU891A-XL使用的固定滑动编码器"
       },
       "0.10.0": {
         "en": "Add support for  IMST iU891A-XL receiver",
