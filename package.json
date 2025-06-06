@@ -1,6 +1,6 @@
 {
   "name": "iobroker.wireless-mbus",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "Receive data from Wireless Meter-Bus (wM-Bus) devices like gas or electricity meters",
   "author": {
     "name": "Christian Landvogt",
@@ -28,7 +28,7 @@
   "dependencies": {
     "@iobroker/adapter-core": "^3.2.3",
     "node-aes-cmac": "^0.1.1",
-    "serialport": "^12.0.0"
+    "serialport": "^13.0.0"
   },
   "files": [
     "io-package.json",
@@ -48,18 +48,18 @@
     "lib/wmbus_decoder.js"
   ],
   "devDependencies": {
-    "@iobroker/adapter-dev": "^1.3.0",
-    "@iobroker/testing": "^5.0.3",
+    "@iobroker/adapter-dev": "^1.4.0",
+    "@iobroker/testing": "^5.0.4",
     "@serialport/binding-mock": "^10.2.2",
-    "@serialport/stream": "^12.0.0",
+    "@serialport/stream": "^13.0.0",
     "@types/chai": "^4.3.19",
     "@types/mocha": "^10.0.10",
-    "@types/node": "^22.13.4",
+    "@types/node": "^22.15.30",
     "chai": "^4.5.0",
     "eslint": "^8.57.1",
-    "mocha": "^11.1.0",
+    "mocha": "^11.5.0",
     "mockery": "^2.1.0",
-    "typescript": "^5.7.3"
+    "typescript": "^5.8.3"
   },
   "main": "main.js",
   "scripts": {
