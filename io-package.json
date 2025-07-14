@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "wireless-mbus",
-    "version": "0.10.1",
+    "version": "0.10.2",
     "news": {
+      "0.10.2": {
+        "en": "Improve robustness of IMST iU891A-XL communication",
+        "de": "Stabiliere Kommunikation mit IMST IU891A-XL",
+        "ru": "Повышение надежности IMST IU891A-XL Communication",
+        "pt": "Melhorar a robustez da comunicação IMST IU891A-XL",
+        "nl": "Verbetering van de robuustheid van IMST IU891A-XL-communicatie",
+        "fr": "Améliorer la robustesse de la communication IU891A-XL",
+        "it": "Migliora la robustezza della comunicazione IUI IU891A-XL",
+        "es": "Mejorar la robustez de la comunicación IU891-XL",
+        "pl": "Popraw solidność komunikacji IMST IU891A-XL",
+        "uk": "Поліпшити надійність IMST IU891A-xL Communication",
+        "zh-cn": "提高IMST IU891A-XL通信的鲁棒性"
+      },
       "0.10.1": {
         "en": "Fix SLIP encoder used by IMST iU891A-XL",
         "de": "Korrektur des SLIP Encoders für IMST iU891A-XL",
