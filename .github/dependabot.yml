@@ -1,13 +1,17 @@
+# Dependabot will run on day 23 of each month at 01:27 (Europe/Berlin timezone)
 version: 2
 updates:
-  - package-ecosystem: "npm" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: "npm"
+    directory: "/"
     schedule:
-      interval: "monthly"
+      interval: "cron"
+      timezone: "Europe/Berlin"
+      cronjob: "27 1 23 * *"
     assignees:
-      - lvogt
+      - "lvogt"
     groups:
       production-dependencies:
         dependency-type: "production"
       development-dependencies:
         dependency-type: "development"
+    open-pull-requests-limit: 15
