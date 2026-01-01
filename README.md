@@ -219,6 +219,6 @@ Afterwards, when you delete the device from the object tree, the adapter will no
 ## License
 
 Copyright (c) 2019 ISFH - Institute for Solar Energy Research www.isfh.de
-Copyright (c) 2021 - 2025 Christian Landvogt
+Copyright (c) 2021-2026 Christian Landvogt
 
 Licensed under GPLv2. See [LICENSE](LICENSE) and [NOTICE](NOTICE)
