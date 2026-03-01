@@ -54,9 +54,9 @@
     "@serialport/stream": "^13.0.0",
     "@types/chai": "^4.3.19",
     "@types/mocha": "^10.0.10",
-    "@types/node": "^24.0.13",
-    "chai": "^4.5.0",
-    "eslint": "^8.57.1",
+    "@types/node": "^25.3.3",
+    "chai": "^6.2.2",
+    "eslint": "^10.0.2",
     "mocha": "^11.7.1",
     "mockery": "^2.1.0",
     "typescript": "^5.8.3"
