@@ -1,13 +1,17 @@
 version: 2
 updates:
-  - package-ecosystem: "npm" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: 'npm' # See documentation for possible values
+    directory: '/' # Location of package manifests
     schedule:
-      interval: "monthly"
+      interval: 'monthly'
     assignees:
       - lvogt
     groups:
       production-dependencies:
-        dependency-type: "production"
+        dependency-type: 'production'
       development-dependencies:
-        dependency-type: "development"
+        dependency-type: 'development'
+    ignore:
+      - dependency-name: '@types/node'
+        update-types:
+          - 'version-update:semver-major'
