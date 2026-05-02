@@ -16,7 +16,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [20]
+        node-version: [22.x]
 
     steps:
       - name: Checkout code
@@ -43,7 +43,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [18, 20, 22, 24]
+        node-version: [18, 22, 24]
         os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:

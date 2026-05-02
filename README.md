@@ -74,6 +74,9 @@ Afterwards, when you delete the device from the object tree, the adapter will no
 
 ## Changelog
 
+### **WORK IN PROGRESS**
+- (copilot) Adapter requires node.js >= 22 now
+
 ### 0.10.2
 * (ChL) Improve robustness of IMST iU891A-XL communication
 
