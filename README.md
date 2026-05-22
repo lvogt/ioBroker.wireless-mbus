@@ -74,6 +74,10 @@ Afterwards, when you delete the device from the object tree, the adapter will no
 
 ## Changelog
 
+
+### **WORK IN PROGRESS**
+- (ioBroker-Bot) Adapter requires js-controller >= 6.0.11 now.
+
 ### 0.10.2
 * (ChL) Improve robustness of IMST iU891A-XL communication
 
