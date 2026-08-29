@@ -1,4 +1,5 @@
 import config from '@iobroker/eslint-config';
+import globals from 'globals';
 
 export default [
     ...config,
@@ -10,12 +11,6 @@ export default [
             'admin/words.js',
             '**/adapter-config.d.ts',
             '*.config.mjs',
-
-            // Test code and device mocks: mocha globals plus deliberate
-            // protocol-level oddities. Matches the ioBroker template.
-            '**/*.test.js',
-            'test/**/*.js',
-            'lib/receiver/test/**/*.js',
 
             // The embedded telegram parser is replaced by the
             // wireless-mbus-parser library. Formatting ~2500 lines that are
@@ -50,6 +45,28 @@ export default [
         // so allow unused module-level constants here, while still catching
         // unused locals and parameters.
         files: ['lib/receiver/*.js'],
+        rules: {
+            '@typescript-eslint/no-unused-vars': [
+                'error',
+                {
+                    varsIgnorePattern: '^[A-Z][A-Za-z0-9_]*$',
+                    argsIgnorePattern: '^_',
+                    caughtErrors: 'all',
+                },
+            ],
+        },
+    },
+    {
+        // Test code and the serial device mocks. The shared config only
+        // declares node globals, so mocha's describe/it/before/after need
+        // adding, and the mocks deliberately keep unused protocol constants
+        // and unused callback parameters to mirror the real interfaces.
+        files: ['**/*.test.js', 'test/**/*.js', 'lib/receiver/test/**/*.js'],
+        languageOptions: {
+            globals: {
+                ...globals.mocha,
+            },
+        },
         rules: {
             '@typescript-eslint/no-unused-vars': [
                 'error',
