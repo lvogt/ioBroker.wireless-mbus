@@ -66,7 +66,7 @@
   },
   "main": "main.js",
   "scripts": {
-    "test:unit": "mocha --config test/mocharc.custom.json \"{!(node_modules|test)/**/*.test.js,lib/*.test.js,*.test.js,test/**/test!(PackageFiles|Startup).js}\"",
+    "test:unit": "mocha --config test/mocharc.custom.json \"{lib/**/*.test.js,test/**/*.test.js,*.test.js}\"",
     "test:package": "mocha test/package --exit",
     "test:integration": "mocha test/integration --exit",
     "test": "npm run test:unit && npm run test:package",

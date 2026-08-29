@@ -39,7 +39,7 @@ let receiver;
 let tcpMockServer;
 
 function assertWithValidationFile(actual, filename) {
-    const path = `./lib/receiver/test/validation/${filename}.json`;
+    const path = `./test/receiver/validation/${filename}.json`;
     if (!fs.existsSync(path)) {
         fs.writeFileSync(path, `=== new file ===\n${JSON.stringify(actual, null, 4)}`);
     }
@@ -58,7 +58,7 @@ async function initDevice(deviceClass, mode, port) {
         opts.path = port;
     }
 
-    ReceiverClass = require(`../${deviceClass}`);
+    ReceiverClass = require(`../../lib/receiver/${deviceClass}`);
     receiver = new ReceiverClass(opts, mode, onMessage, console.log, showReceiverLogMessages ? logger : emptyLogger);
     await receiver.init();
 }
@@ -117,11 +117,32 @@ async function sendTelegramViaTcp(port, dataString, frameType, withCrc) {
 
 function initMockery(receiverClass) {
     mockery.enable({ useCleanCache: true });
-    mockery.registerSubstitute('serialport', `./test/${receiverClass}DeviceMock`);
+    // Resolved relative to lib/receiver/SerialDevice.js, which is the module
+    // whose require('serialport') is being substituted.
+    mockery.registerSubstitute('serialport', `../../test/receiver/${receiverClass}DeviceMock`);
     mockery.registerAllowables([
+        // specifiers used by the modules under lib/receiver/
         './SerialDevice',
+        './AmberMessage',
+        './HciMessage',
+        './HciMessageV2',
+        './SlipEncoder',
+        './EbiMessage',
+        '../SimpleLogger',
+        // specifiers used by this file and the mocks alongside it
         './DeviceMock',
         './MockBindingHelper',
+        '../../lib/receiver/CulReceiver',
+        '../../lib/receiver/SimpleReceiver',
+        '../../lib/receiver/AmberReceiver',
+        '../../lib/receiver/AmberMessage',
+        '../../lib/receiver/ImstReceiver',
+        '../../lib/receiver/HciMessage',
+        '../../lib/receiver/ImstV2Receiver',
+        '../../lib/receiver/HciMessageV2',
+        '../../lib/receiver/EbiReceiver',
+        '../../lib/receiver/EbiMessage',
+        // third party and built-ins pulled in along the way
         '@serialport/binding-mock',
         '@serialport/stream',
         'fs',
@@ -140,23 +161,6 @@ function initMockery(receiverClass) {
         './common',
         'ms',
         'debug',
-        'events',
-        '../SimpleLogger',
-        '../CulReceiver',
-        '../SimpleReceiver',
-        '../AmberReceiver',
-        '../AmberMessage',
-        './AmberMessage',
-        '../ImstReceiver',
-        './HciMessage',
-        '../HciMessage',
-        '../ImstV2Receiver',
-        './HciMessageV2',
-        '../HciMessageV2',
-        './SlipEncoder',
-        '../EbiReceiver',
-        './EbiMessage',
-        '../EbiMessage',
     ]);
 }
 
@@ -372,7 +376,7 @@ describe('Test CUL over TCP receiver', () => {
     });
 
     it('init T mode', async () => {
-        const CulReceiver = require('../CulReceiver');
+        const CulReceiver = require('../../lib/receiver/CulReceiver');
         receiver = new CulReceiver(
             { isTcp: true, host: '127.0.0.1', port: 5005 },
             'T',

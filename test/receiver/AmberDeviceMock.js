@@ -1,7 +1,7 @@
 'use strict';
 
 const DeviceMock = require('./DeviceMock');
-const AmberMessage = require('../AmberMessage');
+const AmberMessage = require('../../lib/receiver/AmberMessage');
 
 class AmberDeviceMock extends DeviceMock {
     constructor(options) {

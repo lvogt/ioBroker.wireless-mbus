@@ -1,7 +1,7 @@
 'use strict';
 
 const DeviceMock = require('./DeviceMock');
-const HciMessage = require('../HciMessage');
+const HciMessage = require('../../lib/receiver/HciMessage');
 
 class ImstDeviceMock extends DeviceMock {
     constructor(options) {

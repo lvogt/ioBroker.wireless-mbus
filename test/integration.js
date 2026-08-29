@@ -7,16 +7,18 @@ const net = require('node:net');
 const port = 5000;
 
 function copyMocks(harness) {
-    fs.mkdirSync(`${harness.testAdapterDir}/lib/receiver/test`);
-    const files = fs.readdirSync(`${harness.adapterDir}/lib/receiver/test`, { withFileTypes: true });
+    // The published package does not contain test/, so the mocks have to be
+    // copied into the installed adapter before the receivers can use them.
+    fs.mkdirSync(`${harness.testAdapterDir}/test/receiver`, { recursive: true });
+    const files = fs.readdirSync(`${harness.adapterDir}/test/receiver`, { withFileTypes: true });
     files.forEach(file => {
         if (file.isDirectory()) {
             return;
         }
 
         fs.writeFileSync(
-            `${harness.testAdapterDir}/lib/receiver/test/${file.name}`,
-            fs.readFileSync(`${harness.adapterDir}/lib/receiver/test/${file.name}`),
+            `${harness.testAdapterDir}/test/receiver/${file.name}`,
+            fs.readFileSync(`${harness.adapterDir}/test/receiver/${file.name}`),
         );
     });
 }
@@ -43,7 +45,8 @@ async function prepareAdapterWithMock(harness, mockType, forceFail) {
     try {
         await harness.objects.getObject('system.adapter.wireless-mbus.0', async (err, obj) => {
             const classFile = fs.readFileSync(`${harness.testAdapterDir}/lib/receiver/SerialDevice.js`, 'utf-8');
-            const patchedClass = classFile.replace("'serialport'", `'./test/${mockType}DeviceMock'`);
+            // relative to lib/receiver/SerialDevice.js, where the require lives
+            const patchedClass = classFile.replace("'serialport'", `'../../test/receiver/${mockType}DeviceMock'`);
             fs.writeFileSync(`${harness.testAdapterDir}/lib/receiver/SerialDevice.js`, patchedClass);
 
             if (forceFail) {

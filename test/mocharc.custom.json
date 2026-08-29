@@ -3,8 +3,8 @@
         "test/mocha.setup.js"
     ],
     "watch-files": [
-        "!(node_modules|test)/**/*.test.js",
-        "*.test.js",
-        "test/**/test!(PackageFiles|Startup).js"
+        "lib/**/*.test.js",
+        "test/**/*.test.js",
+        "*.test.js"
     ]
 }
