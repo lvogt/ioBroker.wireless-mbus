@@ -1,11 +1,23 @@
+# Dependabot configuration
+#
+# Cooldown delays normal npm updates by 7 days so freshly published versions
+# settle before we see them; security updates are exempt and arrive at once.
+# Cooldown is not supported for the github-actions ecosystem.
+# https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference
 version: 2
 updates:
-  - package-ecosystem: "npm" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  # npm runs on day 23 of each month at 01:27 (Europe/Berlin)
+  - package-ecosystem: "npm"
+    directory: "/"
     schedule:
-      interval: "monthly"
+      interval: "cron"
+      timezone: "Europe/Berlin"
+      cronjob: "27 1 23 * *"
     assignees:
       - lvogt
+    open-pull-requests-limit: 15
+    cooldown:
+      default-days: 7
     groups:
       production-dependencies:
         dependency-type: "production"
@@ -20,10 +32,20 @@ updates:
         update-types:
           - "version-update:semver-major"
           - "version-update:semver-minor"
+      # @types/node tracks the *minimum* supported node version, not the newest
+      # one. engines.node is ">=22", so staying on ^22 is what makes tsc reject
+      # APIs that would be missing at runtime for users on that floor.
+      - dependency-name: "@types/node"
+        update-types:
+          - "version-update:semver-major"
 
+  # github-actions runs on day 10 of each month at 02:44 (Europe/Berlin)
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "monthly"
+      interval: "cron"
+      timezone: "Europe/Berlin"
+      cronjob: "44 2 10 * *"
     assignees:
       - lvogt
+    open-pull-requests-limit: 15

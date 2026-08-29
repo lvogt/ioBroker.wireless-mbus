@@ -12,6 +12,9 @@ iobroker.*.tgz
 
 Thumbs.db
 
+# ignore .commitinfo created by the ioBroker release script
+.commitinfo
+
 # i18n intermediate files
 admin/i18n/flat.txt
 admin/i18n/*/flat.txt
