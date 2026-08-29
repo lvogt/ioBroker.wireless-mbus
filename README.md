@@ -47,9 +47,10 @@ From version 0.9.0 on, the adapter also supports to connect to serial devices re
 ### Other options
 
 * **Update unchanged states**: When a telegram arrives all states will be updated, even if their value did not change. (default: on)
-* **Cache for compact frames support**: To support compact telegrams (used by some (Kamstrup?) devices) the structure of all receveived telegrams is cached. This means usually only one cache entry per device. If you do not have any device which sends compact telegrams you can disable it to save a bit of performance and memory. (default: off)
 * **Force energy units to kWh**: All energy units (Wh and J) will be converted to kWh. (default: off)
 * **Temporarily block device after consecutive failures**: If 10 consecutive telegrams of the same device are not parsed successfully the device will be ignored until adapter restart (default: on)
+
+Compact telegrams (used by some Kamstrup devices) are supported automatically: the structure of a full telegram is remembered and reused to decode the compact ones. The very first compact telegram of a device therefore cannot be decoded yet and is silently skipped until a matching full telegram has been received.
 
 
 ### AES keys
@@ -79,6 +80,10 @@ Afterwards, when you delete the device from the object tree, the adapter will no
 -->
 
 ### **WORK IN PROGRESS**
+* (ChL) Replace the built-in telegram parser with the wireless-mbus-parser library
+* (ChL) Measured values are now stored as numbers instead of preformatted strings
+* (ChL) Fix decoding of the tariff and device unit of a data record
+* (ChL) Compact telegrams are now supported without a separate option; the option "Cache for compact frames support" was removed
 * (ChL) Follow further ioBroker repository recommendations: move the test code below `test/`, use the short `admin/i18n/<lang>.json` layout and clean up the keywords
 * (ChL) Run the adapter tests only after linting and type checking succeeded
 

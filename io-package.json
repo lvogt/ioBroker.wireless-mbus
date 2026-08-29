@@ -169,7 +169,6 @@
     "wmbusMode": "T",
     "serialBaudRate": 9600,
     "alwaysUpdate": true,
-    "drCacheEnabled": false,
     "forcekWh": false,
     "autoBlocklist": true,
     "aeskeys": [],
