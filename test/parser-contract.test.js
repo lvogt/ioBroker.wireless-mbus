@@ -49,8 +49,9 @@ async function parseErrorName(parser, hex, options = {}) {
         await parse(parser, hex, options);
         return null;
     } catch (error) {
-        const parserError = /** @type {Error} */ (error);
-        return parserError.name;
+        // narrowing rather than a JSDoc cast: eslint's jsdoc/check-tag-names
+        // considers @type redundant here and --fix deletes it
+        return error instanceof Error ? error.name : String(error);
     }
 }
 

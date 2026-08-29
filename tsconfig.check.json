@@ -12,9 +12,6 @@
         "**/build",
         "node_modules/",
         "widgets/",
-        "gulpfile.js",
-
-        // Browser-side admin file, replaced by admin/jsonConfig.json
-        "admin/words.js"
+        "gulpfile.js"
     ]
 }
