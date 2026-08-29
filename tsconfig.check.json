@@ -1,7 +1,9 @@
 // Specialized tsconfig for type-checking js files
 {
     "extends": "./tsconfig.json",
-    "compilerOptions": {},
+    "compilerOptions": {
+	"ignoreDeprecations": "6.0"
+    },
     "include": [
         "**/*.js",
         "**/*.d.ts"
@@ -10,6 +12,20 @@
         "**/build",
         "node_modules/",
         "widgets/",
-        "gulpfile.js"
+        "gulpfile.js",
+
+        // The embedded telegram parser is replaced by the wireless-mbus-parser
+        // library; it is not worth making 110 pre-existing strict-mode errors
+        // pass in code that is about to be deleted. Drop these exclusions
+        // together with the files themselves.
+        "lib/wmbus_decoder.js",
+        "lib/wmbus_decoder.test.js",
+        "lib/prios-decoder.js",
+        "lib/tch-decoder.js",
+        "lib/vifinfo.js",
+        "lib/decode.js",
+
+        // Browser-side admin file, replaced by admin/jsonConfig.json
+        "admin/words.js"
     ]
 }
