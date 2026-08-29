@@ -120,8 +120,6 @@ class WirelessMbus extends utils.Adapter {
         const port = typeof this.config.serialPort !== 'undefined' ? this.config.serialPort : '/dev/ttyWMBUS';
         // @ts-expect-error serialBaudRate is typed as number, but the admin UI may store it as a string
         const baud = typeof this.config.serialBaudRate !== 'undefined' ? parseInt(this.config.serialBaudRate) : 9600;
-        const mode = typeof this.config.wmbusMode !== 'undefined' ? this.config.wmbusMode : 'T';
-
         const options = this.createOptions(port, baud);
 
         const receiverInfo = getReceiver(this.config.deviceType);
@@ -130,6 +128,8 @@ class WirelessMbus extends utils.Adapter {
             this.log.error(`No or unknown adapter type selected! ${this.config.deviceType}`);
             return;
         }
+
+        const mode = this.resolveMode(receiverInfo, this.config.wmbusMode);
 
         try {
             this.receiver = new receiverInfo.ReceiverClass(
@@ -154,6 +154,30 @@ class WirelessMbus extends utils.Adapter {
             this.setConnected(false);
             return;
         }
+    }
+
+    /**
+     * A configured mode can belong to a different receiver - the admin UI
+     * resets it when the receiver changes, but a configuration written before
+     * that, or edited outside the UI, can still carry a stale value. Falling
+     * back to the receiver's first mode beats initialising the hardware with
+     * one it does not know.
+     */
+    resolveMode(receiverInfo, configuredMode) {
+        const modes = Object.keys(receiverInfo.modes);
+
+        if (modes.includes(configuredMode)) {
+            return configuredMode;
+        }
+
+        if (!modes.length) {
+            return configuredMode;
+        }
+
+        this.log.warn(
+            `Mode "${configuredMode}" is not supported by ${receiverInfo.name} - falling back to "${modes[0]}"`,
+        );
+        return modes[0];
     }
 
     createOptions(port, baud) {
@@ -434,25 +458,98 @@ class WirelessMbus extends utils.Adapter {
         }
     }
 
+    /**
+     * The serial ports as jsonConfig selectSendTo options. The control is
+     * configured with "manual": true, so a port that is not listed - a
+     * tcp://host:port address for instance - can still be typed in.
+     */
+    async listUartOptions() {
+        if (!SerialPort) {
+            this.log.warn('Module serialport is not available');
+            return [];
+        }
+
+        try {
+            const ports = await SerialPort.list();
+            this.log.debug(`Found serial ports: ${JSON.stringify(ports)}`);
+            return ports.map(port => ({
+                label: port.manufacturer ? `${port.path} (${port.manufacturer})` : port.path,
+                value: port.path,
+            }));
+        } catch (error) {
+            this.log.error(`Could not list the serial ports: ${error}`);
+            return [];
+        }
+    }
+
+    /** The modes of one receiver as jsonConfig selectSendTo options. */
+    listWmbusModeOptions(deviceType) {
+        const receiver = getReceiver(deviceType);
+        if (!receiver) {
+            return [];
+        }
+
+        return Object.entries(receiver.modes).map(([value, label]) => ({ label, value }));
+    }
+
+    /**
+     * Merge the devices that asked for a key into the configured key list, so
+     * they only need the key filled in.
+     *
+     * The result goes to a jsonConfig sendTo control with "useNative", which
+     * puts the returned native into the open form without saving anything -
+     * deliberately no "saveConfig", because the added rows still carry the
+     * placeholder key and saving now would restart the instance for a
+     * configuration the user has not finished editing.
+     *
+     * The merge starts from the saved configuration, which is all the running
+     * adapter knows about, so rows added in the form but not yet saved are
+     * replaced. The button asks before doing that.
+     */
+    importNeedsKeyNative() {
+        const aeskeys = Array.isArray(this.config.aeskeys) ? [...this.config.aeskeys] : [];
+        let added = 0;
+
+        for (const id of this.needsKey) {
+            if (aeskeys.findIndex(item => item.id === id) === -1) {
+                aeskeys.push({ id: id, key: 'UNKNOWN' });
+                added++;
+            }
+        }
+
+        return {
+            native: { aeskeys },
+            result: added ? `Added ${added} device(s)` : 'No new devices found',
+        };
+    }
+
     onMessage(obj) {
         if (typeof obj === 'object' && obj.callback) {
             switch (obj.command) {
                 case 'listUart':
-                    if (SerialPort) {
-                        SerialPort.list().then(
-                            ports => {
-                                this.log.info(`List of port: ${JSON.stringify(ports)}`);
-                                this.sendTo(obj.from, obj.command, ports, obj.callback);
-                            },
-                            err => this.log.error(JSON.stringify(err)),
-                        );
-                    } else {
-                        this.log.warn('Module serialport is not available');
-                        this.sendTo(obj.from, obj.command, [{ comName: 'Not available' }], obj.callback);
-                    }
+                    this.listUartOptions().then(options => this.sendTo(obj.from, obj.command, options, obj.callback));
                     break;
                 case 'listReceiver':
-                    this.sendTo(obj.from, obj.command, this.receivers, obj.callback);
+                    this.sendTo(
+                        obj.from,
+                        obj.command,
+                        Object.entries(this.receivers).map(([value, receiver]) => ({
+                            label: receiver.name,
+                            value,
+                        })),
+                        obj.callback,
+                    );
+                    break;
+                case 'listWmbusMode':
+                    this.sendTo(
+                        obj.from,
+                        obj.command,
+                        this.listWmbusModeOptions(obj.message && obj.message.deviceType),
+                        obj.callback,
+                    );
+                    break;
+                case 'importNeedsKey':
+                    this.sendTo(obj.from, obj.command, this.importNeedsKeyNative(), obj.callback);
                     break;
                 case 'needsKey':
                     this.sendTo(obj.from, obj.command, this.needsKey, obj.callback);

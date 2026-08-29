@@ -157,8 +157,19 @@ tests.integration(path.join(__dirname, '..'), {
             it('Test listReceiver', async () => {
                 await delay(2000);
 
+                // jsonConfig selectSendTo expects [{ label, value }]
                 const receivers = await sendToAdapter(harness, 'listReceiver', null);
-                expect(receivers).to.have.all.keys('ebi', 'amber', 'imst', 'imstv2', 'cul', 'simple');
+                expect(receivers).to.be.an('array');
+                expect(receivers.map(r => r.value).sort()).to.eql(['amber', 'cul', 'ebi', 'imst', 'imstv2', 'simple']);
+                receivers.forEach(r => expect(r.label).to.be.a('string').and.not.be.empty);
+            }).timeout(15000);
+
+            it('Test listWmbusMode', async () => {
+                const modes = await sendToAdapter(harness, 'listWmbusMode', { deviceType: 'amber' });
+                expect(modes.map(m => m.value).sort()).to.eql(['C', 'CT', 'S', 'T']);
+
+                const unknown = await sendToAdapter(harness, 'listWmbusMode', { deviceType: 'nope' });
+                expect(unknown).to.eql([]);
             }).timeout(15000);
 
             it('Test needsKey', async () => {

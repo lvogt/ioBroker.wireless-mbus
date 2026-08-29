@@ -60,3 +60,37 @@ describe('Receiver registry', () => {
         }
     });
 });
+
+describe('Receiver registry vs. admin config', () => {
+    // The wmbusMode control resets an invalid mode when the receiver changes.
+    // That runs as a JS expression in the browser, so it carries its own copy
+    // of the mode table - this test is what stops the copy drifting.
+    it('the mode table embedded in jsonConfig matches the registry', () => {
+        const jsonConfig = require('../admin/jsonConfig.json');
+        const calculateFunc = jsonConfig.items.tabOptions.items.wmbusMode.onChange.calculateFunc;
+
+        const embedded = new Function('data', `${calculateFunc.split(';')[0]}; return modes;`)({});
+        const registry = Object.fromEntries(
+            Object.entries(listReceivers()).map(([key, receiver]) => [key, Object.keys(receiver.modes)]),
+        );
+
+        expect(embedded).to.eql(registry);
+    });
+
+    it('keeps a still valid mode and otherwise falls back to the first one', () => {
+        const jsonConfig = require('../admin/jsonConfig.json');
+        const reset = new Function('data', jsonConfig.items.tabOptions.items.wmbusMode.onChange.calculateFunc);
+
+        // T exists for both, so switching receiver must not disturb it
+        expect(reset({ deviceType: 'cul', wmbusMode: 'T' })).to.equal('T');
+        // CT is an Amber mode, IMST has no such mode
+        expect(reset({ deviceType: 'imst', wmbusMode: 'CT' })).to.equal('CA');
+        // every receiver's first mode is a valid fallback
+        for (const [key, receiver] of Object.entries(listReceivers())) {
+            const first = Object.keys(receiver.modes)[0];
+            expect(reset({ deviceType: key, wmbusMode: 'nonsense' }), key).to.equal(first);
+        }
+        // an unknown receiver clears the field rather than keeping a stale mode
+        expect(reset({ deviceType: 'nope', wmbusMode: 'T' })).to.equal('');
+    });
+});

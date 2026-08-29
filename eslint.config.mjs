@@ -8,7 +8,6 @@ export default [
             '.dev-server/',
             '.vscode/',
             'build/',
-            'admin/words.js',
             '**/adapter-config.d.ts',
             '*.config.mjs',
         ],
