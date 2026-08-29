@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "wireless-mbus",
-    "version": "0.10.2",
+    "version": "0.11.0",
     "news": {
+      "0.11.0": {
+        "en": "Require node.js 22 or newer, js-controller >=6.0.11 and admin >=7.6.20\nSwitch to @iobroker/eslint-config (ESLint 9 + Prettier)\nAdd release-script based release management\nInclude the admin translations in the published package",
+        "de": "Erfordert Node.js 22 oder neuer, js-controller >=6.0.11 und admin >=7.6.20\nWechseln Sie zu @iobroker/eslint-config (ESLint 9 + Prettier)\nRelease-Skript-basiertes Release-Management hinzufügen\nFügen Sie die Administratorübersetzungen in das veröffentlichte Paket ein.",
+        "ru": "Требуется Node.js версии 22 или новее, js-controller >=6.0.11 и admin >=7.6.20.\nПереключитесь на @iobroker/eslint-config (ESLint 9 + Prettier)\nДобавить управление релизами на основе скриптов выпуска\nВключите переводы для административной панели в опубликованный пакет.",
+        "pt": "Requer Node.js versão 22 ou superior, js-controller versão 6.0.11 ou superior e admin versão 7.6.20 ou superior.\nMude para @iobroker/eslint-config (ESLint 9 + Prettier)\nAdicionar gerenciamento de versões baseado em script de lançamento\nInclua as traduções administrativas no pacote publicado.",
+        "nl": "Node.js versie 22 of nieuwer, js-controller >=6.0.11 en admin >=7.6.20 zijn vereist.\nSchakel over naar @iobroker/eslint-config (ESLint 9 + Prettier)\nVoeg release-scriptgebaseerd releasebeheer toe.\nVoeg de beheerdersvertalingen toe aan het gepubliceerde pakket.",
+        "fr": "Nécessite Node.js 22 ou une version plus récente, js-controller >= 6.0.11 et admin >= 7.6.20\nPassez à @iobroker/eslint-config (ESLint 9 + Prettier)\nAjouter une gestion des versions basée sur des scripts de publication\nIncluez les traductions d'administration dans le package publié.",
+        "it": "Richiede Node.js 22 o versioni successive, js-controller >=6.0.11 e admin >=7.6.20\nPassa a @iobroker/eslint-config (ESLint 9 + Prettier)\nAggiungere la gestione delle release basata su script di rilascio\nIncludi le traduzioni amministrative nel pacchetto pubblicato",
+        "es": "Requiere Node.js versión 22 o posterior, js-controller >=6.0.11 y admin >=7.6.20.\nCambiar a @iobroker/eslint-config (ESLint 9 + Prettier)\nAgregar gestión de versiones basada en scripts de lanzamiento\nIncluir las traducciones administrativas en el paquete publicado.",
+        "pl": "Wymagany jest node.js 22 lub nowszy, js-controller >=6.0.11 i admin >=7.6.20\nPrzejdź do @iobroker/eslint-config (ESLint 9 + Prettier)\nDodaj zarządzanie wydaniami oparte na skrypcie wydania\nDołącz tłumaczenia administracyjne do opublikowanego pakietu",
+        "uk": "Потрібні node.js 22 або новіша версія, js-controller >=6.0.11 та admin >=7.6.20\nПерейти на @iobroker/eslint-config (ESLint 9 + гарніший)\nДодати керування релізами на основі сценаріїв релізу\nВключити адміністративні переклади до опублікованого пакету",
+        "zh-cn": "需要 Node.js 22 或更高版本、js-controller >=6.0.11 和 admin >=7.6.20\n切换到 @iobroker/eslint-config（ESLint 9 + Prettier）\n添加基于发布脚本的发布管理\n将管理员翻译包含在已发布的软件包中"
+      },
       "0.10.2": {
         "en": "Improve robustness of IMST iU891A-XL communication",
         "de": "Stabiliere Kommunikation mit IMST IU891A-XL",
@@ -80,19 +93,6 @@
         "pl": "Napraw niestandardowe wyświetlanie portów na stronie administratora, jeśli SerialPort nie zwraca żadnych portów",
         "uk": "Виправте відображення спеціального порту на сторінці адміністратора, якщо SerialPort не повертає жодного порту",
         "zh-cn": "如果 SerialPort 未返回任何端口，则修复管理页面中的自定义端口显示"
-      },
-      "0.9.0": {
-        "en": "Implement serial over TCP; upgrade to serialport 11; at least node v14 required!",
-        "de": "Unterstützung für Serial over TCP; Upgrade von SerialPort auf v11; Node v14 wird mindestens benötigt!",
-        "ru": "Реализуйте последовательный порт через TCP; обновление до последовательного порта 11; требуется как минимум узел v14!",
-        "pt": "Implementar serial sobre TCP; atualize para porta serial 11; pelo menos o nó v14 é necessário!",
-        "nl": "Implementeer serieel via TCP; upgrade naar seriële poort 11; minimaal knooppunt v14 vereist!",
-        "fr": "Implémenter la série sur TCP ; mise à niveau vers le port série 11 ; au moins le nœud v14 requis !",
-        "it": "Implementare la porta seriale su TCP; aggiornamento alla porta seriale 11; è richiesto almeno il nodo v14!",
-        "es": "Implementar serie sobre TCP; actualizar al puerto serie 11; ¡Se requiere al menos el nodo v14!",
-        "pl": "Zaimplementuj połączenie szeregowe przez TCP; aktualizacja do portu szeregowego 11; wymagany jest co najmniej węzeł v14!",
-        "uk": "Реалізація послідовного порту TCP; оновлення до послідовного порту 11; потрібен принаймні вузол v14!",
-        "zh-cn": "通过TCP实现串行；升级到串口11；至少需要节点 v14！"
       }
     },
     "titleLang": {
