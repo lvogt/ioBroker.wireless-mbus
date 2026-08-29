@@ -226,6 +226,8 @@ Afterwards, when you delete the device from the object tree, the adapter will no
 ### 0.1.0
 * (ChL) initial release
 
+[Older changelogs can be found there](CHANGELOG_OLD.md)
+
 ## License
 
 Copyright (c) 2019 ISFH - Institute for Solar Energy Research www.isfh.de
