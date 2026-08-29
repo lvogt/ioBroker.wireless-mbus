@@ -3,7 +3,7 @@
 const { expect } = require('chai');
 const fs = require('node:fs');
 const net = require('node:net');
-const mockery = require('mockery');
+const { EventHelper, MockBinding } = require('./MockBindingHelper');
 
 const options = { path: '/dev/mockPort', baudRate: 38400 };
 
@@ -59,6 +59,7 @@ function assertWithValidationFile(actual, filename) {
 async function initDevice(deviceClass, mode, port) {
     const opts = {
         ...options,
+        ...(deviceMock ? { serialPortImpl: deviceMock } : {}),
     };
     if (typeof port !== 'undefined') {
         opts.path = port;
@@ -121,59 +122,23 @@ async function sendTelegramViaTcp(port, dataString, frameType, withCrc) {
     });
 }
 
-function initMockery(receiverClass) {
-    mockery.enable({ useCleanCache: true });
-    // Resolved relative to lib/receiver/SerialDevice.js, which is the module
-    // whose require('serialport') is being substituted.
-    mockery.registerSubstitute('serialport', `../../test/receiver/${receiverClass}DeviceMock`);
-    mockery.registerAllowables([
-        // specifiers used by the modules under lib/receiver/
-        './SerialDevice',
-        './AmberMessage',
-        './HciMessage',
-        './HciMessageV2',
-        './SlipEncoder',
-        './EbiMessage',
-        '../SimpleLogger',
-        // specifiers used by this file and the mocks alongside it
-        './DeviceMock',
-        './MockBindingHelper',
-        '../../lib/receiver/CulReceiver',
-        '../../lib/receiver/SimpleReceiver',
-        '../../lib/receiver/AmberReceiver',
-        '../../lib/receiver/AmberMessage',
-        '../../lib/receiver/ImstReceiver',
-        '../../lib/receiver/HciMessage',
-        '../../lib/receiver/ImstV2Receiver',
-        '../../lib/receiver/HciMessageV2',
-        '../../lib/receiver/EbiReceiver',
-        '../../lib/receiver/EbiMessage',
-        // third party and built-ins pulled in along the way
-        '@serialport/binding-mock',
-        '@serialport/stream',
-        'fs',
-        'node:fs',
-        'stream',
-        './node.js',
-        'net',
-        'node:net',
-        'events',
-        'node:events',
-        'util',
-        'supports-color',
-        'os',
-        'tty',
-        'has-flag',
-        './common',
-        'ms',
-        'debug',
-    ]);
+// The receivers take the SerialPort implementation through their options, so
+// a device mock is injected rather than substituted for the 'serialport'
+// module. Set per suite, picked up by initDevice().
+let deviceMock = null;
+
+function useDeviceMock(receiverClass) {
+    ({ SerialPort: deviceMock } = require(`./${receiverClass}DeviceMock`));
 }
 
-function stopMockery(receiverClass) {
-    mockery.deregisterAll();
-    mockery.disable();
+function resetDeviceMock(receiverClass) {
+    deviceMock = null;
     messages = [];
+
+    // Every mock instance subscribes to the shared write emitter; without a
+    // fresh module per test they would otherwise pile up across suites.
+    EventHelper.emitter.removeAllListeners('write');
+    MockBinding.reset();
 
     const path = `./${receiverClass}Receiver.config.json`;
     if (fs.existsSync(path)) {
@@ -182,8 +147,8 @@ function stopMockery(receiverClass) {
 }
 
 describe('Test CUL receiver', () => {
-    beforeEach(() => initMockery('Cul'));
-    afterEach(() => stopMockery('Cul'));
+    beforeEach(() => useDeviceMock('Cul'));
+    afterEach(() => resetDeviceMock('Cul'));
 
     it('init T mode', async () => {
         await testInit('CulReceiver', 'T');
@@ -219,8 +184,8 @@ describe('Test CUL receiver', () => {
 });
 
 describe('Test AMBER receiver', () => {
-    beforeEach(() => initMockery('Amber'));
-    afterEach(() => stopMockery('Amber'));
+    beforeEach(() => useDeviceMock('Amber'));
+    afterEach(() => resetDeviceMock('Amber'));
 
     it('init T mode', async () => {
         await testInit('AmberReceiver', 'T');
@@ -254,8 +219,8 @@ describe('Test AMBER receiver', () => {
 });
 
 describe('Test IMST receiver', () => {
-    beforeEach(() => initMockery('Imst'));
-    afterEach(() => stopMockery('Imst'));
+    beforeEach(() => useDeviceMock('Imst'));
+    afterEach(() => resetDeviceMock('Imst'));
 
     it('init T mode', async () => {
         await testInit('ImstReceiver', 'T');
@@ -285,8 +250,8 @@ describe('Test IMST receiver', () => {
 });
 
 describe('Test EMBIT receiver', () => {
-    beforeEach(() => initMockery('Ebi'));
-    afterEach(() => stopMockery('Ebi'));
+    beforeEach(() => useDeviceMock('Ebi'));
+    afterEach(() => resetDeviceMock('Ebi'));
 
     it('init T mode', async () => {
         await testInit('EbiReceiver', 'T');
@@ -316,8 +281,8 @@ describe('Test EMBIT receiver', () => {
 });
 
 describe('Test SIMPLE receiver', () => {
-    beforeEach(() => initMockery('Simple'));
-    afterEach(() => stopMockery('Simple'));
+    beforeEach(() => useDeviceMock('Simple'));
+    afterEach(() => resetDeviceMock('Simple'));
 
     it('init A mode', async () => {
         await testInit('SimpleReceiver', 'A');
@@ -432,8 +397,8 @@ describe('Test CUL over TCP receiver', () => {
 });
 
 describe('Test IMSTv2 receiver', () => {
-    beforeEach(() => initMockery('ImstV2'));
-    afterEach(() => stopMockery('ImstV2'));
+    beforeEach(() => useDeviceMock('ImstV2'));
+    afterEach(() => resetDeviceMock('ImstV2'));
 
     it('init T mode', async () => {
         await testInit('ImstV2Receiver', 'T');
