@@ -11,6 +11,15 @@ updates:
         dependency-type: "production"
       development-dependencies:
         dependency-type: "development"
+    ignore:
+      # typescript-eslint (pulled in by @iobroker/eslint-config) peer-depends
+      # on "typescript >=4.8.4 <6.1.0". Anything at or above 6.1 makes npm ci
+      # fail with ERESOLVE, so only patch updates are safe for now. Remove
+      # this entry once typescript-eslint widens its peer range.
+      - dependency-name: "typescript"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
 
   - package-ecosystem: "github-actions"
     directory: "/"
