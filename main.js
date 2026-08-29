@@ -17,9 +17,9 @@
 'use strict';
 
 const utils = require('@iobroker/adapter-core');
-const fs = require('node:fs');
 
 const { WirelessMbusParser, guessDeviceId } = require('wireless-mbus-parser');
+const { listReceivers, getReceiver } = require('./lib/receiver');
 const ObjectHelper = require('./lib/ObjectHelper.js');
 const { SerialPort } = require('serialport');
 
@@ -28,10 +28,6 @@ const { SerialPort } = require('serialport');
 // once a full frame with the same header signature has primed the parser's
 // cache, so the first one from every device always fails.
 const EXPECTED_PARSER_ERRORS = ['DATA_RECORD_CACHE_MISSING'];
-
-let ReceiverModule;
-
-const receiverPath = '/lib/receiver/';
 
 class WirelessMbus extends utils.Adapter {
     constructor(options) {
@@ -118,7 +114,7 @@ class WirelessMbus extends utils.Adapter {
             });
         }
 
-        this.receivers = this.getReceivers();
+        this.receivers = listReceivers();
         this.setConnected(false);
 
         const port = typeof this.config.serialPort !== 'undefined' ? this.config.serialPort : '/dev/ttyWMBUS';
@@ -128,31 +124,29 @@ class WirelessMbus extends utils.Adapter {
 
         const options = this.createOptions(port, baud);
 
-        const receiverClass = this.getReceiverClass(this.config.deviceType);
-        const receiverName = this.getReceiverName(this.config.deviceType);
-        const receiverJs = `.${receiverPath}${receiverClass}`;
+        const receiverInfo = getReceiver(this.config.deviceType);
+
+        if (!receiverInfo) {
+            this.log.error(`No or unknown adapter type selected! ${this.config.deviceType}`);
+            return;
+        }
 
         try {
-            if (fs.existsSync(receiverJs)) {
-                ReceiverModule = require(receiverJs);
-                this.receiver = new ReceiverModule(
-                    options,
-                    mode,
-                    this.dataReceived.bind(this),
-                    this.serialError.bind(this),
-                    {
-                        debug: this.log.debug,
-                        info: this.log.info,
-                        error: this.log.error,
-                    },
-                );
-                this.log.debug(`Created device of type: ${receiverName}`);
+            this.receiver = new receiverInfo.ReceiverClass(
+                options,
+                mode,
+                this.dataReceived.bind(this),
+                this.serialError.bind(this),
+                {
+                    debug: this.log.debug,
+                    info: this.log.info,
+                    error: this.log.error,
+                },
+            );
+            this.log.debug(`Created device of type: ${receiverInfo.name}`);
 
-                await this.receiver.init();
-                this.setConnected(true);
-            } else {
-                this.log.error(`No or unknown adapter type selected! ${receiverClass}`);
-            }
+            await this.receiver.init();
+            this.setConnected(true);
         } catch (e) {
             this.log.error(`Error opening serial port ${port} with baudrate ${baud}`);
             // @ts-expect-error the catch binding is `unknown`, log.error expects a string
@@ -168,39 +162,6 @@ class WirelessMbus extends utils.Adapter {
             return { isTcp: true, host: matches[1], port: parseInt(matches[2]) };
         }
         return { path: port, baudRate: baud };
-    }
-
-    getReceivers() {
-        const receivers = {};
-        const json = JSON.parse(fs.readFileSync(`${this.adapterDir}${receiverPath}receiver.json`, 'utf8'));
-        Object.keys(json).forEach(item => {
-            if (fs.existsSync(this.adapterDir + receiverPath + json[item].js)) {
-                receivers[item] = json[item];
-            }
-        });
-
-        return receivers;
-    }
-
-    getReceiverClass(type) {
-        if (type in this.receivers) {
-            return this.receivers[type].js;
-        }
-        return type;
-    }
-
-    getReceiverName(type) {
-        if (type in this.receivers) {
-            return this.receivers[type].name;
-        }
-        return type;
-    }
-
-    getReceiverJs(type) {
-        if (type in this.receivers) {
-            return `.${receiverPath}${this.receivers[type].js}`;
-        }
-        return `.${receiverPath}${type}`;
     }
 
     async serialError(err) {
