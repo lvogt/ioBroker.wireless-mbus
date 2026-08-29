@@ -17,7 +17,7 @@
 'use strict';
 
 const utils = require('@iobroker/adapter-core');
-const fs = require('fs');
+const fs = require('node:fs');
 
 const WMBusDecoder = require('./lib/wmbus_decoder.js');
 const ObjectHelper = require('./lib/ObjectHelper.js');
