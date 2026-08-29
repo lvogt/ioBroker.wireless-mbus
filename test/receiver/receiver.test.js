@@ -38,6 +38,12 @@ let ReceiverClass;
 let receiver;
 let tcpMockServer;
 
+// Probing a property that only exists on one half of a union type, without
+// asking tsc to accept it on the other half.
+function typeOfProperty(object, name) {
+    return object === null || object === undefined ? 'undefined' : typeof object[name];
+}
+
 function assertWithValidationFile(actual, filename) {
     const path = `./test/receiver/validation/${filename}.json`;
     if (!fs.existsSync(path)) {
@@ -387,12 +393,42 @@ describe('Test CUL over TCP receiver', () => {
         await receiver.init();
 
         const actual = tcpMockServer.communicationLog;
-        receiver.closeConnection();
+        await receiver.closeConnection();
         receiver = null;
 
         const filename = `Cul.init-T`;
         assertWithValidationFile(actual, filename);
     });
+
+    it('does not reconnect after the connection was closed on purpose', async () => {
+        const CulReceiver = require('../../lib/receiver/CulReceiver');
+        receiver = new CulReceiver(
+            { isTcp: true, host: '127.0.0.1', port: 5005 },
+            'T',
+            onMessage,
+            console.log,
+            showReceiverLogMessages ? logger : emptyLogger,
+        );
+        await receiver.init();
+
+        // A TCP connection is a net.Socket, which has no close() at all - the
+        // adapter used to call port.close() here and threw instead of closing.
+        // tsc agrees: "close" does not exist on SerialPort | Socket.
+        expect(typeOfProperty(receiver.port, 'close')).to.equal('undefined');
+        expect(typeOfProperty(receiver.port, 'end')).to.equal('function');
+
+        await receiver.closeConnection();
+
+        // handleTcpClose() reconnects unless closeRequested was set first, so
+        // a reconnect here would mean the adapter cannot be stopped.
+        expect(receiver.closeRequested).to.be.true;
+        expect(receiver.port).to.be.null;
+
+        await new Promise(resolve => setTimeout(resolve, 300));
+        expect(receiver.port, 'receiver reconnected after an intentional close').to.be.null;
+
+        receiver = null;
+    }).timeout(3000);
 });
 
 describe('Test IMSTv2 receiver', () => {

@@ -61,12 +61,20 @@ class WirelessMbus extends utils.Adapter {
         this.stateValues = {};
     }
 
-    onUnload(callback) {
+    async onUnload(callback) {
+        const receiver = this.receiver;
+        this.receiver = null;
+
         try {
-            this.receiver.port.close();
-            this.receiver = undefined;
-            callback && callback();
-        } catch {
+            // closeConnection() rather than port.close(): it also marks the
+            // close as requested, without which a serial-over-TCP connection
+            // reconnects itself while the adapter is shutting down.
+            if (receiver) {
+                await receiver.closeConnection();
+            }
+        } catch (error) {
+            this.log.warn(`Error while closing the receiver connection: ${error}`);
+        } finally {
             callback && callback();
         }
     }
@@ -195,10 +203,12 @@ class WirelessMbus extends utils.Adapter {
         return `.${receiverPath}${type}`;
     }
 
-    serialError(err) {
+    async serialError(err) {
         this.log.error(`Serialport error: ${err.message}`);
         this.setConnected(false);
-        this.onUnload();
+        // A second error for the same connection finds this.receiver already
+        // cleared and becomes a no-op.
+        await this.onUnload();
     }
 
     setConnected(isConnected) {

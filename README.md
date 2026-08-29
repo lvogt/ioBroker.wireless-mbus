@@ -81,6 +81,7 @@ Afterwards, when you delete the device from the object tree, the adapter will no
 
 ### **WORK IN PROGRESS**
 * (ChL) Replace the built-in telegram parser with the wireless-mbus-parser library
+* (ChL) Fix shutdown of the adapter: a serial connection over TCP was not closed properly and could reconnect itself while the adapter was stopping
 * (ChL) Measured values are now stored as numbers instead of preformatted strings
 * (ChL) Fix decoding of the tariff and device unit of a data record
 * (ChL) Compact telegrams are now supported without a separate option; the option "Cache for compact frames support" was removed
