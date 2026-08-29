@@ -61,7 +61,7 @@ export default [
         // declares node globals, so mocha's describe/it/before/after need
         // adding, and the mocks deliberately keep unused protocol constants
         // and unused callback parameters to mirror the real interfaces.
-        files: ['**/*.test.js', 'test/**/*.js', 'lib/receiver/test/**/*.js'],
+        files: ['**/*.test.js', 'test/**/*.js'],
         languageOptions: {
             globals: {
                 ...globals.mocha,

@@ -1,7 +1,7 @@
 'use strict';
 
 const DeviceMock = require('./DeviceMock');
-const EbiMessage = require('../EbiMessage');
+const EbiMessage = require('../../lib/receiver/EbiMessage');
 
 class EbiDeviceMock extends DeviceMock {
     constructor(options) {
