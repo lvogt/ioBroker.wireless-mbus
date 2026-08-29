@@ -5,7 +5,7 @@
     "news": {
       "0.11.0": {
         "en": "Require node.js 22 or newer, js-controller >=6.0.11 and admin >=7.6.20\nSwitch to @iobroker/eslint-config (ESLint 9 + Prettier)\nAdd release-script based release management\nInclude the admin translations in the published package",
-        "de": "Erfordert Node.js 22 oder neuer, js-controller >=6.0.11 und admin >=7.6.20\nWechseln Sie zu @iobroker/eslint-config (ESLint 9 + Prettier)\nRelease-Skript-basiertes Release-Management hinzufügen\nFügen Sie die Administratorübersetzungen in das veröffentlichte Paket ein.",
+        "de": "Erfordert Node.js 22 oder neuer, js-controller >=6.0.11 und admin >=7.6.20\nWechsel auf @iobroker/eslint-config (ESLint 9 + Prettier)\nRelease-Skript-basiertes Release-Management\nAdmin-Übersetzungen werden mit veröffentlicht.",
         "ru": "Требуется Node.js версии 22 или новее, js-controller >=6.0.11 и admin >=7.6.20.\nПереключитесь на @iobroker/eslint-config (ESLint 9 + Prettier)\nДобавить управление релизами на основе скриптов выпуска\nВключите переводы для административной панели в опубликованный пакет.",
         "pt": "Requer Node.js versão 22 ou superior, js-controller versão 6.0.11 ou superior e admin versão 7.6.20 ou superior.\nMude para @iobroker/eslint-config (ESLint 9 + Prettier)\nAdicionar gerenciamento de versões baseado em script de lançamento\nInclua as traduções administrativas no pacote publicado.",
         "nl": "Node.js versie 22 of nieuwer, js-controller >=6.0.11 en admin >=7.6.20 zijn vereist.\nSchakel over naar @iobroker/eslint-config (ESLint 9 + Prettier)\nVoeg release-scriptgebaseerd releasebeheer toe.\nVoeg de beheerdersvertalingen toe aan het gepubliceerde pakket.",
