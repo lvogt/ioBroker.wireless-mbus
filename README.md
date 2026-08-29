@@ -77,6 +77,11 @@ Afterwards, when you delete the device from the object tree, the adapter will no
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+
+### **WORK IN PROGRESS**
+* (ChL) Follow further ioBroker repository recommendations: move the test code below `test/`, use the short `admin/i18n/<lang>.json` layout and clean up the keywords
+* (ChL) Run the adapter tests only after linting and type checking succeeded
+
 ### 0.11.0 (2026-08-29)
 * (ChL) Require node.js 22 or newer, js-controller >=6.0.11 and admin >=7.6.20
 * (ChL) Switch to @iobroker/eslint-config (ESLint 9 + Prettier)
