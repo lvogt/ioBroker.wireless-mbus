@@ -23,7 +23,6 @@
         "lib/prios-decoder.js",
         "lib/tch-decoder.js",
         "lib/vifinfo.js",
-        "lib/decode.js",
 
         // Browser-side admin file, replaced by admin/jsonConfig.json
         "admin/words.js"
