@@ -9,7 +9,6 @@
   "homepage": "https://github.com/lvogt/ioBroker.wireless-mbus",
   "license": "GPL-2.0-only",
   "keywords": [
-    "iobroker",
     "ioBroker",
     "wmbus",
     "measure",
