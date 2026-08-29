@@ -28,7 +28,6 @@ let ReceiverModule;
 const receiverPath = '/lib/receiver/';
 
 class WirelessMbus extends utils.Adapter {
-
     constructor(options) {
         super({
             ...options,
@@ -59,44 +58,44 @@ class WirelessMbus extends utils.Adapter {
             this.receiver = undefined;
             this.decoder = undefined;
             callback && callback();
-        } catch (e) {
+        } catch {
             callback && callback();
         }
     }
 
     async onReady() {
         const objConnection = {
-            '_id': 'info.connection',
-            'type': 'state',
-            'common': {
-                'role': 'indicator.connected',
-                'name': 'If connected to wM-Bus receiver',
-                'type': 'boolean',
-                'read': true,
-                'write': false,
-                'def': false
+            _id: 'info.connection',
+            type: 'state',
+            common: {
+                role: 'indicator.connected',
+                name: 'If connected to wM-Bus receiver',
+                type: 'boolean',
+                read: true,
+                write: false,
+                def: false,
             },
-            'native': {}
+            native: {},
         };
         await this.objectHelper.createObject(objConnection._id, objConnection);
 
         const objRaw = {
-            '_id': 'info.rawdata',
-            'type': 'state',
-            'common': {
-                'role': 'value',
-                'name': 'Telegram raw data if parser failed',
-                'type': 'string',
-                'read': true,
-                'write': false,
-                'def': false
+            _id: 'info.rawdata',
+            type: 'state',
+            common: {
+                role: 'value',
+                name: 'Telegram raw data if parser failed',
+                type: 'string',
+                read: true,
+                write: false,
+                def: false,
             },
-            'native': {}
+            native: {},
         };
         await this.objectHelper.createObject(objRaw._id, objRaw);
 
         if (typeof this.config.aeskeys !== 'undefined') {
-            this.config.aeskeys.forEach((item) => {
+            this.config.aeskeys.forEach(item => {
                 if (item.key === 'UNKNOWN') {
                     this.needsKey.push(item.id);
                 }
@@ -106,10 +105,10 @@ class WirelessMbus extends utils.Adapter {
         this.receivers = this.getReceivers();
         this.setConnected(false);
 
-        const port = (typeof this.config.serialPort !== 'undefined' ? this.config.serialPort : '/dev/ttyWMBUS');
-        // @ts-ignore
-        const baud = (typeof this.config.serialBaudRate !== 'undefined' ? parseInt(this.config.serialBaudRate) : 9600);
-        const mode = (typeof this.config.wmbusMode !== 'undefined' ? this.config.wmbusMode : 'T');
+        const port = typeof this.config.serialPort !== 'undefined' ? this.config.serialPort : '/dev/ttyWMBUS';
+        // @ts-expect-error serialBaudRate is typed as number, but the admin UI may store it as a string
+        const baud = typeof this.config.serialBaudRate !== 'undefined' ? parseInt(this.config.serialBaudRate) : 9600;
+        const mode = typeof this.config.wmbusMode !== 'undefined' ? this.config.wmbusMode : 'T';
 
         const options = this.createOptions(port, baud);
 
@@ -120,17 +119,26 @@ class WirelessMbus extends utils.Adapter {
         try {
             if (fs.existsSync(receiverJs)) {
                 ReceiverModule = require(receiverJs);
-                this.receiver = new ReceiverModule(options, mode, this.dataReceived.bind(this), this.serialError.bind(this), {
-                    debug: this.log.debug,
-                    info: this.log.info,
-                    error: this.log.error
-                });
+                this.receiver = new ReceiverModule(
+                    options,
+                    mode,
+                    this.dataReceived.bind(this),
+                    this.serialError.bind(this),
+                    {
+                        debug: this.log.debug,
+                        info: this.log.info,
+                        error: this.log.error,
+                    },
+                );
                 this.log.debug(`Created device of type: ${receiverName}`);
 
-                this.decoder = new WMBusDecoder({
-                    debug: this.log.debug,
-                    error: this.log.error
-                }, this.config.drCacheEnabled);
+                this.decoder = new WMBusDecoder(
+                    {
+                        debug: this.log.debug,
+                        error: this.log.error,
+                    },
+                    this.config.drCacheEnabled,
+                );
 
                 await this.receiver.init();
                 this.setConnected(true);
@@ -139,7 +147,7 @@ class WirelessMbus extends utils.Adapter {
             }
         } catch (e) {
             this.log.error(`Error opening serial port ${port} with baudrate ${baud}`);
-            // @ts-ignore
+            // @ts-expect-error the catch binding is `unknown`, log.error expects a string
             this.log.error(e);
             this.setConnected(false);
             return;
@@ -150,15 +158,14 @@ class WirelessMbus extends utils.Adapter {
         const matches = String(port).match(/tcp:\/\/([^:]+):(\d+)/);
         if (matches) {
             return { isTcp: true, host: matches[1], port: parseInt(matches[2]) };
-        } else {
-            return { path: port, baudRate: baud };
         }
+        return { path: port, baudRate: baud };
     }
 
     getReceivers() {
         const receivers = {};
         const json = JSON.parse(fs.readFileSync(`${this.adapterDir}${receiverPath}receiver.json`, 'utf8'));
-        Object.keys(json).forEach((item) => {
+        Object.keys(json).forEach(item => {
             if (fs.existsSync(this.adapterDir + receiverPath + json[item].js)) {
                 receivers[item] = json[item];
             }
@@ -268,34 +275,35 @@ class WirelessMbus extends utils.Adapter {
         }
 
         const hexId = data.readUInt16LE(2);
-        const manufacturer = String.fromCharCode((hexId >> 10) + 64)
-            + String.fromCharCode(((hexId >> 5) & 0x1f) + 64)
-            + String.fromCharCode((hexId & 0x1f) + 64);
+        const manufacturer =
+            String.fromCharCode((hexId >> 10) + 64) +
+            String.fromCharCode(((hexId >> 5) & 0x1f) + 64) +
+            String.fromCharCode((hexId & 0x1f) + 64);
 
         return `${manufacturer}-${data.readUInt32LE(4).toString(16).padStart(8, '0')}`;
     }
 
     isDeviceBlocked(id) {
-        if ((typeof this.config.blacklist === 'undefined') || !this.config.blacklist.length) {
+        if (typeof this.config.blacklist === 'undefined' || !this.config.blacklist.length) {
             return false;
         }
 
-        const found = this.config.blacklist.find((item) => {
+        const found = this.config.blacklist.find(item => {
             if (typeof item.id === 'undefined') {
                 return false;
-            } else {
-                return item.id == id;
             }
+            return item.id == id;
         });
 
-        if (typeof found !== 'undefined') { // found
+        if (typeof found !== 'undefined') {
+            // found
             return true;
         }
         return false;
     }
 
     checkAutoBlocklist(id) {
-        const i = this.failedDevices.findIndex((dev) => dev.id == id);
+        const i = this.failedDevices.findIndex(dev => dev.id == id);
         if (i === -1) {
             this.failedDevices.push({ id: id, count: 1 });
         } else {
@@ -308,52 +316,54 @@ class WirelessMbus extends utils.Adapter {
     }
 
     resetAutoBlocklist(id) {
-        const i = this.failedDevices.findIndex((dev) => dev.id == id);
-        if ((i !== -1) && (this.failedDevices[i].count)) {
+        const i = this.failedDevices.findIndex(dev => dev.id == id);
+        if (i !== -1 && this.failedDevices[i].count) {
             this.failedDevices[i].count = 0;
         }
     }
 
     checkWrongKey(id, code) {
-        if (code == 9) { // ERR_NO_AESKEY
-            if (typeof this.needsKey.find((el) => el == id) === 'undefined') {
+        if (code == 9) {
+            // ERR_NO_AESKEY
+            if (typeof this.needsKey.find(el => el == id) === 'undefined') {
                 this.needsKey.push(id);
             }
         }
     }
 
     getAesKey(id) {
-        if ((typeof this.config.aeskeys === 'undefined') || !this.config.aeskeys.length) {
+        if (typeof this.config.aeskeys === 'undefined' || !this.config.aeskeys.length) {
             return undefined;
         }
 
         // look for perfect match
-        const perfectMatch = this.config.aeskeys.find((item) => {
+        const perfectMatch = this.config.aeskeys.find(item => {
             if (typeof item.id === 'undefined') {
                 return false;
-            } else {
-                return item.id == id;
             }
+            return item.id == id;
         });
 
-        if (typeof perfectMatch !== 'undefined') { // found
+        if (typeof perfectMatch !== 'undefined') {
+            // found
             return perfectMatch.key;
         }
 
         // which device names start with our id
-        const candidates = this.config.aeskeys.filter((item) => {
+        const candidates = this.config.aeskeys.filter(item => {
             if (typeof item.id === 'undefined') {
                 return false;
-            } else {
-                return id.startsWith(item.id);
             }
+            return id.startsWith(item.id);
         });
 
-        if (candidates.length == 1) { // only 1 match - take it
+        if (candidates.length == 1) {
+            // only 1 match - take it
             return candidates[0].key;
         }
 
-        if (candidates.length > 1) { // more than one, find the best
+        if (candidates.length > 1) {
+            // more than one, find the best
             let len = candidates[0].id.length;
             let pos = 0;
             for (let i = 1; i < candidates.length; i++) {
@@ -399,7 +409,10 @@ class WirelessMbus extends utils.Adapter {
         this.log.debug(`Updating device: ${deviceId}`);
         for (const key of Object.keys(data.deviceInformation)) {
             const name = `${deviceId}.info.${key}`;
-            if ((typeof this.stateValues[name] === 'undefined') || (this.stateValues[name] !== data.deviceInformation[key])) {
+            if (
+                typeof this.stateValues[name] === 'undefined' ||
+                this.stateValues[name] !== data.deviceInformation[key]
+            ) {
                 this.stateValues[name] = data.deviceInformation[key];
                 await this.objectHelper.updateState(name, data.deviceInformation[key]);
             }
@@ -409,7 +422,11 @@ class WirelessMbus extends utils.Adapter {
 
         for (const item of data.dataRecord) {
             const name = `${deviceId}.data.${item.number}-${item.storageNo}-${item.type}`;
-            if (this.config.alwaysUpdate || (typeof this.stateValues[name] === 'undefined') || (this.stateValues[name] !== item.value)) {
+            if (
+                this.config.alwaysUpdate ||
+                typeof this.stateValues[name] === 'undefined' ||
+                this.stateValues[name] !== item.value
+            ) {
                 this.stateValues[name] = item.value;
 
                 let val = item.value;
@@ -434,10 +451,10 @@ class WirelessMbus extends utils.Adapter {
                     if (SerialPort) {
                         SerialPort.list().then(
                             ports => {
-                                this.log.info('List of port: ' + JSON.stringify(ports));
+                                this.log.info(`List of port: ${JSON.stringify(ports)}`);
                                 this.sendTo(obj.from, obj.command, ports, obj.callback);
                             },
-                            err => this.log.error(JSON.stringify(err))
+                            err => this.log.error(JSON.stringify(err)),
                         );
                     } else {
                         this.log.warn('Module serialport is not available');
@@ -456,7 +473,7 @@ class WirelessMbus extends utils.Adapter {
 }
 
 if (require.main !== module) {
-    module.exports = (options) => new WirelessMbus(options);
+    module.exports = options => new WirelessMbus(options);
 } else {
     new WirelessMbus();
 }
