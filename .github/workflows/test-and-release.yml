@@ -1,12 +1,19 @@
 name: Test and Release
 
+# Runs on every push to master and on every PR, plus on the version tags that
+# `npm run release` creates - those tags are what trigger the npm publish.
 on:
   push:
     branches:
       - "master"
-  pull_request:
-  release:
-    types: [published]
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-**"
+  pull_request: {}
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   # Performs quick checks before the expensive test runs
@@ -14,90 +21,48 @@ jobs:
     if: contains(github.event.head_commit.message, '[skip ci]') == false
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [20]
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+      - uses: ioBroker/testing-action-check@v1
         with:
-          node-version: ${{ matrix.node-version }}
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Lint source code
-        run: npm run lint
-      - name: Test package files
-        run: npm run test:package
+          node-version: "22.x"
+          type-checking: true
+          lint: true
 
   # Runs adapter tests on all supported node versions and OSes
   adapter-tests:
     if: contains(github.event.head_commit.message, '[skip ci]') == false
     runs-on: ${{ matrix.os }}
-    needs: [check-and-lint]
-
     strategy:
       matrix:
-        node-version: [18, 20, 22, 24]
+        # Node 20 is intentionally absent: package.json requires node >=22,
+        # and the action sets engine-strict=true, so a node 20 job cannot
+        # even install dependencies.
+        node-version: [22.x, 24.x]
         os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+      - uses: ioBroker/testing-action-adapter@v1
         with:
           node-version: ${{ matrix.node-version }}
+          os: ${{ matrix.os }}
 
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Run unit tests
-        run: npm run test:unit
-
-      - name: Run integration tests (unix only)
-        if: startsWith(runner.OS, 'windows') == false
-        run: DEBUG=testing:* npm run test:integration
-
-      - name: Run integration tests (windows only)
-        if: startsWith(runner.OS, 'windows')
-        run: set DEBUG=testing:* & npm run test:integration
-
-  # publish to npmjs
-  publish:
-    if: github.event.action == 'published'
-    needs: [adapter-tests]
+  # Publishes to npm when a version tag is pushed
+  deploy:
+    needs: [check-and-lint, adapter-tests]
+    if: |
+      contains(github.event.head_commit.message, '[skip ci]') == false &&
+      github.event_name == 'push' &&
+      startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [22]
+    # id-token is required for npm trusted publishing (OIDC) - there is
+    # deliberately no NPM_TOKEN secret.
+    permissions:
+      id-token: write
+      contents: write
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+      - uses: ioBroker/testing-action-deploy@v1
         with:
-          node-version: ${{ matrix.node-version }}
-          registry-url: 'https://registry.npmjs.org/'
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Lint source code
-        run: npm run lint
-      - name: Test package files
-        run: npm run test:package
-
-      - name: Publish to npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish
+          node-version: "24.x"
+          github-token: ${{ secrets.GITHUB_TOKEN }}

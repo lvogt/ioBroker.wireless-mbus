@@ -73,6 +73,16 @@ Afterwards, when you delete the device from the object tree, the adapter will no
 * handling meters with "multiple telegrams"
 
 ## Changelog
+<!--
+    Placeholder for the next version (at the beginning of the line):
+    ### **WORK IN PROGRESS**
+-->
+
+### **WORK IN PROGRESS**
+* (ChL) Require node.js 22 or newer, js-controller >=6.0.11 and admin >=7.6.20
+* (ChL) Switch to @iobroker/eslint-config (ESLint 9 + Prettier)
+* (ChL) Add release-script based release management
+* (ChL) Include the admin translations in the published package
 
 ### 0.10.2
 * (ChL) Improve robustness of IMST iU891A-XL communication
@@ -219,6 +229,6 @@ Afterwards, when you delete the device from the object tree, the adapter will no
 ## License
 
 Copyright (c) 2019 ISFH - Institute for Solar Energy Research www.isfh.de
-Copyright (c) 2021 - 2025 Christian Landvogt
+Copyright (c) 2021 - 2026 Christian Landvogt
 
 Licensed under GPLv2. See [LICENSE](LICENSE) and [NOTICE](NOTICE)
