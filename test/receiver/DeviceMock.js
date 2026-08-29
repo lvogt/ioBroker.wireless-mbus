@@ -53,8 +53,11 @@ class DeviceMock extends SerialPortStream {
         this.port.emitData(data);
     }
 
-    close() {
-        super.close();
+    close(callback) {
+        // SerialPort.close() calls back when it is done, and SerialDevice
+        // waits for that - swallowing the callback here made closeConnection()
+        // hang forever against a mocked receiver.
+        super.close(callback);
         MockBinding.reset();
     }
 }
