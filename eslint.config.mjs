@@ -24,6 +24,14 @@ export default [
             'jsdoc/require-param': 'off',
             'jsdoc/require-param-description': 'off',
             'jsdoc/require-returns': 'off',
+
+            // This rule reports "@type is redundant when using a type system"
+            // and --fix then deletes the tag. That holds for TypeScript
+            // sources, but these are .js files checked with checkJs, where a
+            // JSDoc @type is the only way to state a type - and removing one
+            // breaks `npm run check` silently. Re-enable once the sources are
+            // really TypeScript.
+            'jsdoc/check-tag-names': 'off',
         },
     },
     {
