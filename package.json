@@ -60,9 +60,9 @@
     "@iobroker/types": "^7.2.2",
     "@serialport/binding-mock": "^10.2.2",
     "@serialport/stream": "^13.0.0",
-    "@types/node": "^24.0.13",
+    "@types/node": "^26.3.0",
     "mockery": "^2.1.0",
-    "typescript": "~6.0.3"
+    "typescript": "~7.0.2"
   },
   "main": "main.js",
   "scripts": {
