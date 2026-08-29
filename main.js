@@ -19,9 +19,15 @@
 const utils = require('@iobroker/adapter-core');
 const fs = require('node:fs');
 
-const WMBusDecoder = require('./lib/wmbus_decoder.js');
+const { WirelessMbusParser, guessDeviceId } = require('wireless-mbus-parser');
 const ObjectHelper = require('./lib/ObjectHelper.js');
 const { SerialPort } = require('serialport');
+
+// Parse errors that are expected during normal operation and must not count
+// towards the auto blocklist. A compact frame (CI 0x79) can only be decoded
+// once a full frame with the same header signature has primed the parser's
+// cache, so the first one from every device always fails.
+const EXPECTED_PARSER_ERRORS = ['DATA_RECORD_CACHE_MISSING'];
 
 let ReceiverModule;
 
@@ -43,7 +49,10 @@ class WirelessMbus extends utils.Adapter {
 
         this.connected = false;
         this.receiver = null;
-        this.decoder = null;
+        // One long lived instance: the parser caches data record headers per
+        // instance to decode compact frames, so it must survive between
+        // telegrams.
+        this.parser = new WirelessMbusParser();
 
         this.failedDevices = [];
         this.needsKey = [];
@@ -56,7 +65,6 @@ class WirelessMbus extends utils.Adapter {
         try {
             this.receiver.port.close();
             this.receiver = undefined;
-            this.decoder = undefined;
             callback && callback();
         } catch {
             callback && callback();
@@ -131,14 +139,6 @@ class WirelessMbus extends utils.Adapter {
                     },
                 );
                 this.log.debug(`Created device of type: ${receiverName}`);
-
-                this.decoder = new WMBusDecoder(
-                    {
-                        debug: this.log.debug,
-                        error: this.log.error,
-                    },
-                    this.config.drCacheEnabled,
-                );
 
                 await this.receiver.init();
                 this.setConnected(true);
@@ -217,7 +217,7 @@ class WirelessMbus extends utils.Adapter {
     async dataReceived(data) {
         this.setConnected(true);
 
-        const id = this.parseID(data.rawData);
+        const id = guessDeviceId(data.rawData);
 
         if (data.rawData.length < 11) {
             if (id == 'ERR-XXXXXXXX') {
@@ -234,53 +234,73 @@ class WirelessMbus extends utils.Adapter {
             return;
         }
 
-        // look for AES key
-        let key = this.getAesKey(id);
+        const key = this.getAesKeyBuffer(id);
 
-        if (typeof key !== 'undefined') {
-            if (key === 'UNKNOWN') {
-                key = undefined;
-            } else {
-                this.log.debug(`Found AES key: ${key}`);
-            }
-        }
-
-        if (!this.decoder) {
-            this.log.error('wmbus decoder has not be initialized!');
+        let result;
+        try {
+            // verbose is required by toLegacyResult()
+            const parsed = await this.parser.parse(data.rawData, {
+                verbose: true,
+                containsCrc: data.containsCrc,
+                key: key,
+            });
+            result = WirelessMbusParser.toLegacyResult(parsed);
+        } catch (error) {
+            this.handleParserError(id, data, error);
             return;
         }
 
-        this.decoder.parse(data.rawData, data.containsCrc, key, data.frameType, (err, result) => {
-            if (err) {
-                this.log.debug(`Parser failed to parse telegram from device ${id}`);
-                if (this.config.autoBlocklist) {
-                    this.checkAutoBlocklist(id);
-                }
+        this.resetAutoBlocklist(id);
 
-                this.setState('info.rawdata', data.rawData.toString('hex'), true);
-                this.checkWrongKey(id, err.code);
-                return;
-            }
-
-            this.resetAutoBlocklist(id);
-
-            const deviceId = `${result.deviceInformation.Manufacturer}-${result.deviceInformation.Id}`;
-            this.updateDevice(deviceId, result);
-        });
+        const deviceId = `${result.deviceInformation.Manufacturer}-${result.deviceInformation.Id}`;
+        await this.updateDevice(deviceId, result);
     }
 
-    parseID(data) {
-        if (data.length < 8) {
-            return 'ERR-XXXXXXXX';
+    handleParserError(id, data, error) {
+        const name = error && error.name ? error.name : 'UNKNOWN_ERROR';
+        const isExpected = EXPECTED_PARSER_ERRORS.includes(name);
+
+        if (isExpected) {
+            // A compact frame that arrived before the matching full frame is
+            // normal - do not treat it as a device failure.
+            this.log.debug(`Waiting for a full frame to decode compact telegrams of device ${id} (${name})`);
+            return;
         }
 
-        const hexId = data.readUInt16LE(2);
-        const manufacturer =
-            String.fromCharCode((hexId >> 10) + 64) +
-            String.fromCharCode(((hexId >> 5) & 0x1f) + 64) +
-            String.fromCharCode((hexId & 0x1f) + 64);
+        this.log.debug(`Parser failed to parse telegram from device ${id}: ${name} - ${error && error.message}`);
+        if (this.config.autoBlocklist) {
+            this.checkAutoBlocklist(id);
+        }
 
-        return `${manufacturer}-${data.readUInt32LE(4).toString(16).padStart(8, '0')}`;
+        this.setState('info.rawdata', data.rawData.toString('hex'), true);
+        this.checkWrongKey(id, name);
+    }
+
+    /**
+     * Resolve the configured AES key for a device into the Buffer the parser
+     * expects. Keys are stored either as 32 hex characters or as a 16
+     * character plain text key.
+     */
+    getAesKeyBuffer(id) {
+        const key = this.getAesKey(id);
+
+        if (typeof key === 'undefined' || key === 'UNKNOWN') {
+            return undefined;
+        }
+
+        if (key.length === 32) {
+            const buffer = Buffer.from(key, 'hex');
+            if (buffer.length === 16) {
+                this.log.debug(`Found AES key for device ${id}`);
+                return buffer;
+            }
+        } else if (key.length === 16) {
+            this.log.debug(`Found AES key for device ${id}`);
+            return Buffer.from(key, 'latin1');
+        }
+
+        this.log.error(`Invalid AES key configured for device ${id} - key rejected!`);
+        return undefined;
     }
 
     isDeviceBlocked(id) {
@@ -322,9 +342,8 @@ class WirelessMbus extends utils.Adapter {
         }
     }
 
-    checkWrongKey(id, code) {
-        if (code == 9) {
-            // ERR_NO_AESKEY
+    checkWrongKey(id, errorName) {
+        if (errorName === 'NO_AES_KEY') {
             if (typeof this.needsKey.find(el => el == id) === 'undefined') {
                 this.needsKey.push(id);
             }

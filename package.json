@@ -26,8 +26,8 @@
   },
   "dependencies": {
     "@iobroker/adapter-core": "^3.4.3",
-    "node-aes-cmac": "^0.1.1",
-    "serialport": "^13.0.0"
+    "serialport": "^13.0.0",
+    "wireless-mbus-parser": "^1.1.0"
   },
   "files": [
     "io-package.json",
@@ -42,11 +42,7 @@
     "lib/receiver/*.js",
     "lib/receiver/receiver.json",
     "lib/SimpleLogger.js",
-    "lib/ObjectHelper.js",
-    "lib/prios-decoder.js",
-    "lib/tch-decoder.js",
-    "lib/vifinfo.js",
-    "lib/wmbus_decoder.js"
+    "lib/ObjectHelper.js"
   ],
   "devDependencies": {
     "@alcalzone/release-script": "^5.2.1",

@@ -14,16 +14,6 @@
         "widgets/",
         "gulpfile.js",
 
-        // The embedded telegram parser is replaced by the wireless-mbus-parser
-        // library; it is not worth making 110 pre-existing strict-mode errors
-        // pass in code that is about to be deleted. Drop these exclusions
-        // together with the files themselves.
-        "lib/wmbus_decoder.js",
-        "lib/wmbus_decoder.test.js",
-        "lib/prios-decoder.js",
-        "lib/tch-decoder.js",
-        "lib/vifinfo.js",
-
         // Browser-side admin file, replaced by admin/jsonConfig.json
         "admin/words.js"
     ]
