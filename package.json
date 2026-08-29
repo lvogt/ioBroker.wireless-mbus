@@ -40,7 +40,6 @@
     "admin/words.js",
     "admin/i18n/",
     "lib/receiver/*.js",
-    "lib/receiver/receiver.json",
     "lib/SimpleLogger.js",
     "lib/ObjectHelper.js"
   ],
