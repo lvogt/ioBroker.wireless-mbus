@@ -18,6 +18,12 @@
         // do not resolve under moduleResolution "node"
         "skipLibCheck": true,
 
+        // Global type packages have to be listed explicitly - they are not
+        // reachable through an import, so nothing pulls them in on its own.
+        // "mocha" provides describe/it/before/after for the test files;
+        // @types/mocha comes in with @iobroker/testing.
+        "types": ["node", "mocha"],
+
         // Set this to false if you want to disable the very strict rules (not recommended)
         "strict": true,
         // Or enable some of those features for more fine-grained control
