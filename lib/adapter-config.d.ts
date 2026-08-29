@@ -4,7 +4,10 @@
 
 import { native } from '../io-package.json';
 
-type _AdapterConfig = typeof native;
+// The empty arrays in io-package.json infer as `never[]`, which cannot be
+// narrowed to the real element types below - so drop them here and declare
+// them explicitly in the augmentation.
+type _AdapterConfig = Omit<typeof native, 'aeskeys' | 'blacklist'>;
 
 // Augment the globally declared type ioBroker.AdapterConfig
 declare global {
