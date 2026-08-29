@@ -21,7 +21,6 @@ export default [
             'lib/prios-decoder.js',
             'lib/tch-decoder.js',
             'lib/vifinfo.js',
-            'lib/decode.js',
         ],
     },
     {
