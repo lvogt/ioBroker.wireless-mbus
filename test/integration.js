@@ -1,8 +1,8 @@
-const path = require('path');
-const fs = require('fs');
+const path = require('node:path');
+const fs = require('node:fs');
 const { tests } = require('@iobroker/testing');
 const { expect } = require('chai');
-const net = require('net');
+const net = require('node:net');
 
 const port = 5000;
 
