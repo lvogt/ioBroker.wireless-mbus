@@ -56,10 +56,11 @@ function assertWithValidationFile(actual, filename) {
     expect(actual).to.eql(expected);
 }
 
-async function initDevice(deviceClass, mode, port) {
+async function initDevice(deviceClass, mode, port, timers) {
     const opts = {
         ...options,
         ...(deviceMock ? { serialPortImpl: deviceMock } : {}),
+        ...(timers ? { timers } : {}),
     };
     if (typeof port !== 'undefined') {
         opts.path = port;
@@ -205,6 +206,33 @@ describe('Test AMBER receiver', () => {
 
     it('init T mode enable CMDOut', async () => {
         await testInit('AmberReceiver', 'T', { cmdOutEnabled: false }, '-cmdout');
+    });
+
+    // The adapter hands in its own timer functions so that js-controller can
+    // clear them on unload - the receivers must not fall back to the global
+    // ones when it does.
+    it('uses the injected timers', async () => {
+        const calls = { set: 0, clear: 0 };
+        const timers = {
+            setTimeout: (callback, ms) => {
+                calls.set++;
+                return setTimeout(callback, ms);
+            },
+            clearTimeout: handle => {
+                calls.clear++;
+                clearTimeout(handle);
+            },
+        };
+
+        // cmdOutEnabled: false makes the init wait for 500 msec
+        fs.writeFileSync('./AmberReceiver.config.json', JSON.stringify({ cmdOutEnabled: false }, null, 4));
+        await initDevice('AmberReceiver', 'T', undefined, timers);
+        receiver = null;
+
+        // one response timeout per command, all of them cleared, plus the
+        // uncleared timer of the 500 msec wait
+        expect(calls.set).to.be.greaterThan(1);
+        expect(calls.clear).to.equal(calls.set - 1);
     });
 
     it('send telegram', async () => {

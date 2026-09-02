@@ -88,6 +88,7 @@ Afterwards, when you delete the device from the object tree, the adapter will no
 * (ChL) Compact telegrams are now supported without a separate option; the option "Cache for compact frames support" was removed
 * (ChL) Follow further ioBroker repository recommendations: move the test code below `test/`, use the short `admin/i18n/<lang>.json` layout and clean up the keywords
 * (ChL) Run the adapter tests only after linting and type checking succeeded
+* (ChL) Use the adapter's own timer functions, so pending timers are cleared when the adapter is unloaded
 
 ### 0.11.0 (2026-08-29)
 * (ChL) Require node.js 22 or newer, js-controller >=6.0.11 and admin >=7.6.20
