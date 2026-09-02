@@ -133,7 +133,15 @@ class WirelessMbus extends utils.Adapter {
 
         try {
             this.receiver = new receiverInfo.ReceiverClass(
-                options,
+                {
+                    ...options,
+                    // Timers created through the adapter are cleared by
+                    // js-controller when the adapter is unloaded.
+                    timers: {
+                        setTimeout: this.setTimeout.bind(this),
+                        clearTimeout: this.clearTimeout.bind(this),
+                    },
+                },
                 mode,
                 this.dataReceived.bind(this),
                 this.serialError.bind(this),
