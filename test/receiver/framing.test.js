@@ -34,13 +34,15 @@ function createReceiver(ReceiverClass, mode) {
     const responses = [];
     /** @type {string[]} */
     const errors = [];
+    /** @type {string[]} */
+    const infos = [];
 
     const receiver = new ReceiverClass(
         { path: '/dev/mockPort', serialPortImpl: function () {} },
         mode,
         message => messages.push(message),
         () => {},
-        { info: () => {}, error: message => errors.push(message), debug: () => {} },
+        { info: message => infos.push(message), error: message => errors.push(message), debug: () => {} },
     );
 
     return {
@@ -48,6 +50,7 @@ function createReceiver(ReceiverClass, mode) {
         messages,
         responses,
         errors,
+        infos,
         /** Pretend a command was sent and is waiting for its response. */
         expectResponse: () => receiver.readPromises.push(data => responses.push(data)),
         receive: (...chunks) =>
@@ -293,6 +296,29 @@ describe('CUL framing', () => {
         expect(cul.messages, 'the telegram behind the response was lost').to.have.lengthOf(1);
     });
 
+    it('takes a telegram for a telegram while a command waits for its answer', () => {
+        const cul = createReceiver(CulReceiver, 'T');
+        cul.expectResponse();
+
+        // Both used to end up at the pending command, which then failed on an
+        // answer that was really a telegram
+        cul.receive(`${line('c8')}TMODE\r\n`);
+
+        expect(cul.messages, 'the telegram was eaten by the command').to.have.lengthOf(1);
+        expect(cul.responses.map(response => response.toString('ascii'))).to.eql(['TMODE']);
+    });
+
+    it('drops a response that nobody asked for', () => {
+        const cul = createReceiver(CulReceiver, 'T');
+
+        // Reporting the version of a receiver as a meter reading is worse than
+        // dropping a line that arrived too late
+        cul.receive(`V 1.30 CUL868\r\n`);
+
+        expect(cul.messages).to.be.empty;
+        expect(cul.infos, 'dropping a line should leave a trace').to.have.lengthOf(1);
+    });
+
     it('discards a telegram line that is not valid hex', () => {
         const cul = createReceiver(CulReceiver, 'T');
 
@@ -353,5 +379,35 @@ describe('TCP framing', () => {
 
         expect(tcp.messages).to.be.empty;
         expect(tcp.errors).to.have.lengthOf(1);
+    });
+});
+
+describe('Message dispatch', () => {
+    it('drops a message that nobody is waiting for', () => {
+        const amber = createReceiver(AmberReceiver, 'T');
+
+        // The answer to a command that has already given up: it used to be
+        // parsed as a telegram, which reported a device that does not exist -
+        // or threw, and then cost the whole parser buffer
+        amber.receive(
+            new AmberMessage()
+                .setPayload(0x0c, Buffer.from([1, 2, 3]))
+                .setupResponse()
+                .build(),
+        );
+
+        expect(amber.messages).to.be.empty;
+        expect(amber.errors).to.be.empty;
+        expect(amber.infos, 'dropping a message should leave a trace').to.have.lengthOf(1);
+    });
+
+    it('takes anything for a telegram where the protocol cannot tell', () => {
+        const cul = createReceiver(CulReceiver, 'T');
+
+        // A CUL response is arbitrary text, so "nobody is waiting for an
+        // answer, therefore it is a telegram" is the best there is
+        cul.receive(`b${telegram}c8\r\n`);
+
+        expect(cul.messages).to.have.lengthOf(1);
     });
 });

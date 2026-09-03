@@ -91,7 +91,7 @@ Afterwards, when you delete the device from the object tree, the adapter will no
 * (ChL) Use the adapter's own timer functions, so pending timers are cleared when the adapter is unloaded
 * (ChL) Fix receivers getting stuck after disturbed reception: a damaged telegram no longer takes the following ones with it, and no longer leaves the adapter yellow until it is restarted by hand (#308, #309)
 * (ChL) The adapter reconnects to the receiver instead of staying idle or stopping when the connection fails
-* (ChL) Fix telegrams getting lost when several meters transmit at the same time (CUL and Simple Hexstring receivers)
+* (ChL) Fix telegrams getting lost when several meters transmit at once, and damaged data being reported as readings of devices that do not exist
 * (ChL) Declare the state that holds the raw data of an unreadable telegram as text rather than as a numeric value
 
 ### 0.11.0 (2026-08-29)
