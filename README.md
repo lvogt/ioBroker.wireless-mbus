@@ -68,6 +68,30 @@ You only need to enter the device ID (e.g. AAA-12345678), which you can get from
 Afterwards, when you delete the device from the object tree, the adapter will not recreate it again.
 
 
+## Updating from 0.11.x
+
+Version 0.12.0 replaces the built-in telegram parser with the
+[wireless-mbus-parser](https://github.com/lvogt/wireless-mbus-parser) library. Object IDs stay as
+they are, but four things change:
+
+* **Measured values are numbers now**, not preformatted text - `"474.240"` became `474.24`. The
+  states have always been of type `mixed`, so ioBroker itself does not mind, but a history back end
+  that has stored them as text does: InfluxDB refuses numbers for a field that holds strings, and
+  the SQL adapter keeps one type per datapoint, so those series start over. Look at the log of your
+  history adapter after the update and decide per series whether to drop the old data or to keep it
+  beside the new one.
+* **Scripts and visualisations that compare or format that text** need a look: `state.val === '474.240'`
+  no longer matches, and a widget that relied on the fixed number of decimals now shows a plain
+  number.
+* **Tariff and device unit were read from the wrong bits** and are correct now, so the *names* of
+  the states of a meter with more than one tariff change. Their IDs do not.
+* **Reserved and unknown VIFs can be named differently** by the library, so a few states of unusual
+  meters appear under a new ID. The old ones stay behind and can be deleted - everything else is
+  written on as before.
+
+The option "Cache for compact frames support" is gone as well: compact telegrams are always
+supported now, and the first one of a meter no longer counts towards the automatic block list.
+
 ## ToDo
 
 * sending telegrams for S mode receivers?
@@ -83,7 +107,7 @@ Afterwards, when you delete the device from the object tree, the adapter will no
 * (ChL) Replace the built-in telegram parser with the wireless-mbus-parser library
 * (ChL) New admin configuration UI (JSON config); a serial port can now simply be typed in, the separate "custom port" field is gone
 * (ChL) Fix shutdown of the adapter: a serial connection over TCP was not closed properly and could reconnect itself while the adapter was stopping
-* (ChL) Measured values are now stored as numbers instead of preformatted strings
+* (ChL) Measured values are now stored as numbers instead of preformatted strings - a history adapter that stored them as text starts a new series
 * (ChL) Fix decoding of the tariff and device unit of a data record
 * (ChL) Compact telegrams are now supported without a separate option; the option "Cache for compact frames support" was removed
 * (ChL) Follow further ioBroker repository recommendations: move the test code below `test/`, use the short `admin/i18n/<lang>.json` layout and clean up the keywords
