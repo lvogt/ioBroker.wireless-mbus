@@ -95,6 +95,29 @@
         "zh-cn": "如果 SerialPort 未返回任何端口，则修复管理页面中的自定义端口显示"
       }
     },
+    "messages": [
+      {
+        "condition": {
+          "operand": "and",
+          "rules": ["oldVersion<0.12.0", "installed"]
+        },
+        "level": "warn",
+        "title": {
+          "en": "New telegram parser",
+          "de": "Neuer Telegramm-Parser"
+        },
+        "text": {
+          "en": "Measured values are now numbers instead of formatted text. A history adapter that has stored them as text will not accept them - InfluxDB in particular - and scripts that compare strings stop matching. A few states of unusual meters change their name. Please read the update notes first.",
+          "de": "Messwerte sind jetzt Zahlen statt formatierter Text. Ein History-Adapter, der sie als Text gespeichert hat, nimmt sie nicht mehr an - vor allem InfluxDB - und Skripte, die Zeichenketten vergleichen, greifen nicht mehr. Einige Datenpunkte ungewöhnlicher Zähler ändern ihren Namen. Bitte vorher die Update-Hinweise lesen."
+        },
+        "link": "https://github.com/lvogt/ioBroker.wireless-mbus#updating-from-011x",
+        "linkText": {
+          "en": "Update notes",
+          "de": "Update-Hinweise"
+        },
+        "buttons": ["agree", "cancel"]
+      }
+    ],
     "titleLang": {
       "en": "Wireless M-Bus",
       "de": "Wireless M-Bus",
