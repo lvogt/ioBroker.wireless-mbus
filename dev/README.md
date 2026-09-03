@@ -68,6 +68,12 @@ sample name is taken as a telegram in hex, and `--frame-type` and `--crc` then s
 
 ## Gotchas
 
+dev-server disables the instance in js-controller and runs the adapter itself. Whatever enables it
+again - the instance list in the admin UI, for instance - gets you two processes for one instance:
+the second one cannot bind the port of the TCP receiver, so it dies and js-controller restarts it
+for as long as you let it. `pgrep -af io.wireless-mbus` says how many are running, and
+`./iob object set system.adapter.wireless-mbus.0 common.enabled=false` ends the race.
+
 The adapter is **not** restarted when the instance configuration is saved while dev-server runs
 it, so `this.config` stays at what it was when the adapter started. Anything that answers from the
 saved configuration then answers with yesterday's news - restart it after a change, by touching a

@@ -1,6 +1,7 @@
 'use strict';
 
 const { expect } = require('chai');
+const net = require('node:net');
 const AmberMessage = require('../../lib/receiver/AmberMessage');
 const AmberReceiver = require('../../lib/receiver/AmberReceiver');
 const CulReceiver = require('../../lib/receiver/CulReceiver');
@@ -368,6 +369,39 @@ describe('TCP framing', () => {
 
         expect(tcp.messages).to.have.lengthOf(1);
         expect(tcp.messages[0].rawData).to.eql(Buffer.from(telegram, 'hex'));
+    });
+
+    it('reports a port that is already taken', async () => {
+        const blocker = net.createServer();
+        await new Promise(resolve => blocker.listen(0, '127.0.0.1', () => resolve(true)));
+        const address = blocker.address();
+        const port = typeof address === 'object' && address ? address.port : 0;
+
+        /** @type {string[]} */
+        const errors = [];
+        const receiver = new TcpReceiver(
+            { path: `${port}` },
+            'A',
+            () => {},
+            error => errors.push(`${error}`),
+            {
+                info: () => {},
+                error: () => {},
+                debug: () => {},
+            },
+        );
+
+        // Listening on a port that is in use used to emit an unhandled error
+        // event, which terminates the adapter
+        const failed = await receiver.init().then(
+            () => false,
+            () => true,
+        );
+
+        expect(failed, 'init() should report that it cannot listen').to.be.true;
+
+        await receiver.closeConnection();
+        await new Promise(resolve => blocker.close(() => resolve(true)));
     });
 
     it('does not throw on data that is no telegram', () => {
