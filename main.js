@@ -29,6 +29,12 @@ const { SerialPort } = require('serialport');
 // cache, so the first one from every device always fails.
 const EXPECTED_PARSER_ERRORS = ['DATA_RECORD_CACHE_MISSING'];
 
+// Delays between two attempts to connect to the receiver (msec). The first
+// ones are quick, because the usual reason for a failed start is a telegram
+// that was in flight; a receiver that stays away is asked every five minutes.
+const INITIAL_RECONNECT_DELAY = 5000;
+const MAX_RECONNECT_DELAY = 300000;
+
 class WirelessMbus extends utils.Adapter {
     constructor(options) {
         super({
@@ -45,6 +51,9 @@ class WirelessMbus extends utils.Adapter {
 
         this.connected = false;
         this.receiver = null;
+        this.reconnectTimeout = null;
+        this.reconnectDelay = INITIAL_RECONNECT_DELAY;
+        this.reconnectAttempts = 0;
         // One long lived instance: the parser caches data record headers per
         // instance to decode compact frames, so it must survive between
         // telegrams.
@@ -57,7 +66,7 @@ class WirelessMbus extends utils.Adapter {
         this.stateValues = {};
     }
 
-    async onUnload(callback) {
+    async closeReceiver() {
         const receiver = this.receiver;
         this.receiver = null;
 
@@ -70,9 +79,19 @@ class WirelessMbus extends utils.Adapter {
             }
         } catch (error) {
             this.log.warn(`Error while closing the receiver connection: ${error}`);
-        } finally {
-            callback && callback();
         }
+    }
+
+    async onUnload(callback) {
+        // An adapter timeout would be cleared by js-controller anyway, but
+        // serialError() schedules one too and must not leave it behind.
+        if (this.reconnectTimeout) {
+            this.clearTimeout(this.reconnectTimeout);
+            this.reconnectTimeout = null;
+        }
+
+        await this.closeReceiver();
+        callback && callback();
     }
 
     async onReady() {
@@ -117,6 +136,20 @@ class WirelessMbus extends utils.Adapter {
         this.receivers = listReceivers();
         this.setConnected(false);
 
+        await this.connectReceiver();
+    }
+
+    /**
+     * Create the configured receiver and initialise the device.
+     *
+     * Initialisation can fail for a reason that is gone again a few seconds
+     * later: a telegram that is in flight while the port is opened costs the
+     * first command its response, which is the normal outcome of restarting
+     * the adapter while the receiver is still in receive mode. Such a failure
+     * used to leave the instance idle until someone restarted it by hand, so
+     * keep trying with a growing delay instead.
+     */
+    async connectReceiver() {
         const port = typeof this.config.serialPort !== 'undefined' ? this.config.serialPort : '/dev/ttyWMBUS';
         // @ts-expect-error serialBaudRate is typed as number, but the admin UI may store it as a string
         const baud = typeof this.config.serialBaudRate !== 'undefined' ? parseInt(this.config.serialBaudRate) : 9600;
@@ -125,6 +158,7 @@ class WirelessMbus extends utils.Adapter {
         const receiverInfo = getReceiver(this.config.deviceType);
 
         if (!receiverInfo) {
+            // Retrying cannot help - only a new configuration can
             this.log.error(`No or unknown adapter type selected! ${this.config.deviceType}`);
             return;
         }
@@ -155,13 +189,51 @@ class WirelessMbus extends utils.Adapter {
 
             await this.receiver.init();
             this.setConnected(true);
-        } catch (e) {
-            this.log.error(`Error opening serial port ${port} with baudrate ${baud}`);
-            // @ts-expect-error the catch binding is `unknown`, log.error expects a string
-            this.log.error(e);
+            this.reconnectDelay = INITIAL_RECONNECT_DELAY;
+            this.reconnectAttempts = 0;
+        } catch (error) {
+            this.logConnectionFailure(`Error opening serial port ${port} with baudrate ${baud}: ${error}`);
             this.setConnected(false);
+            await this.closeReceiver();
+            this.scheduleReconnect();
+        }
+    }
+
+    /**
+     * The first failure of an outage is worth an error, the attempts after it
+     * are not: a receiver that stays unreachable would otherwise fill the log
+     * with the same line for as long as it is away.
+     */
+    logConnectionFailure(message) {
+        if (this.reconnectAttempts) {
+            this.log.debug(message);
+        } else {
+            this.log.error(message);
+        }
+    }
+
+    scheduleReconnect() {
+        if (this.reconnectTimeout) {
+            // A failing connection reports itself twice more often than not:
+            // the port emits an error and the pending command times out
             return;
         }
+
+        const delay = this.reconnectDelay;
+        this.reconnectDelay = Math.min(this.reconnectDelay * 2, MAX_RECONNECT_DELAY);
+
+        const message = `Trying to connect to the receiver again in ${Math.round(delay / 1000)} seconds`;
+        if (this.reconnectAttempts) {
+            this.log.debug(message);
+        } else {
+            this.log.info(message);
+        }
+        this.reconnectAttempts++;
+
+        this.reconnectTimeout = this.setTimeout(() => {
+            this.reconnectTimeout = null;
+            this.connectReceiver().catch(error => this.log.error(`Failed to connect to the receiver: ${error}`));
+        }, delay);
     }
 
     /**
@@ -197,11 +269,17 @@ class WirelessMbus extends utils.Adapter {
     }
 
     async serialError(err) {
-        this.log.error(`Serialport error: ${err.message}`);
-        this.setConnected(false);
+        this.logConnectionFailure(`Serialport error: ${err.message}`);
+
         // A second error for the same connection finds this.receiver already
-        // cleared and becomes a no-op.
-        await this.onUnload();
+        // cleared - the connection is closed and a retry is pending already.
+        if (!this.receiver) {
+            return;
+        }
+
+        this.setConnected(false);
+        await this.closeReceiver();
+        this.scheduleReconnect();
     }
 
     setConnected(isConnected) {
