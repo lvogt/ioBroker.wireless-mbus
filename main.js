@@ -580,21 +580,24 @@ class WirelessMbus extends utils.Adapter {
     }
 
     /**
-     * Merge the devices that asked for a key into the configured key list, so
-     * they only need the key filled in.
+     * Merge the devices that asked for a key into the key list, so they only
+     * need the key filled in.
      *
-     * The result goes to a jsonConfig sendTo control with "useNative", which
-     * puts the returned native into the open form without saving anything -
+     * The list to merge into comes from the open form, which the jsonConfig
+     * control sends along - not from the saved configuration. Merging into
+     * what the adapter has saved replaced whatever was in the form: rows typed
+     * since the last save were lost, and so were saved rows whenever the
+     * running instance had not picked them up yet.
+     *
+     * The result goes to a sendTo control with "useNative", which puts the
+     * returned aeskeys into the open form without saving anything -
      * deliberately no "saveConfig", because the added rows still carry the
      * placeholder key and saving now would restart the instance for a
      * configuration the user has not finished editing.
-     *
-     * The merge starts from the saved configuration, which is all the running
-     * adapter knows about, so rows added in the form but not yet saved are
-     * replaced. The button asks before doing that.
      */
-    importNeedsKeyNative() {
-        const aeskeys = Array.isArray(this.config.aeskeys) ? [...this.config.aeskeys] : [];
+    importNeedsKeyNative(message) {
+        const configured = message && Array.isArray(message.aeskeys) ? message.aeskeys : this.config.aeskeys;
+        const aeskeys = Array.isArray(configured) ? [...configured] : [];
         let added = 0;
 
         for (const id of this.needsKey) {
@@ -604,9 +607,12 @@ class WirelessMbus extends utils.Adapter {
             }
         }
 
+        // The result names a text of the jsonConfig control: a plain string
+        // would not be shown at all next to a native that is used
         return {
             native: { aeskeys },
-            result: added ? `Added ${added} device(s)` : 'No new devices found',
+            result: added ? 'devicesAdded' : 'noNewDevices',
+            args: [added],
         };
     }
 
@@ -636,7 +642,7 @@ class WirelessMbus extends utils.Adapter {
                     );
                     break;
                 case 'importNeedsKey':
-                    this.sendTo(obj.from, obj.command, this.importNeedsKeyNative(), obj.callback);
+                    this.sendTo(obj.from, obj.command, this.importNeedsKeyNative(obj.message), obj.callback);
                     break;
                 case 'needsKey':
                     this.sendTo(obj.from, obj.command, this.needsKey, obj.callback);

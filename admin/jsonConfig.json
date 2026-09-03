@@ -134,7 +134,12 @@
                     "type": "sendTo",
                     "label": "Check for new devices that need a key",
                     "command": "importNeedsKey",
+                    "jsonData": "{\"aeskeys\": ${JSON.stringify(data.aeskeys || [])}}",
                     "useNative": true,
+                    "result": {
+                        "devicesAdded": "importNeedsKeyAdded",
+                        "noNewDevices": "importNeedsKeyNothing"
+                    },
                     "variant": "contained",
                     "icon": "search",
                     "confirm": {
