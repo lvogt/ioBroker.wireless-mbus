@@ -151,7 +151,15 @@ tests.integration(path.join(__dirname, '..'), {
     allowedExitCodes: [11],
 
     defineAdditionalTests({ suite }) {
-        const testedReceiver = ['Amber', 'Cul', 'Ebi', 'Imst', 'ImstV2', 'Simple'][Math.floor(Math.random() * 6)];
+        // One receiver per run keeps it short, but a change to the framing has
+        // to be tried with every one of them: WMBUS_TEST_RECEIVER picks the one
+        // to use instead of leaving it to chance.
+        const receivers = ['Amber', 'Cul', 'Ebi', 'Imst', 'ImstV2', 'Simple'];
+        const pinnedReceiver = process.env.WMBUS_TEST_RECEIVER;
+        const testedReceiver =
+            pinnedReceiver && receivers.includes(pinnedReceiver)
+                ? pinnedReceiver
+                : receivers[Math.floor(Math.random() * receivers.length)];
 
         suite('Test receiver with mocks', getHarness => {
             it(`Test ${testedReceiver}`, async () => {
