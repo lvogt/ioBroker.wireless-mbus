@@ -4,8 +4,11 @@ const { tests } = require('@iobroker/testing');
 const { expect } = require('chai');
 const net = require('node:net');
 
-const port = 5000;
-const culPort = 5099;
+// The receiver of the adapter under test listens on these; WMBUS_TEST_PORT
+// moves them out of the way of anything else that holds 5000, a dev-server
+// configured for the TCP receiver for instance
+const port = Number(process.env.WMBUS_TEST_PORT) || 5000;
+const culPort = port + 99;
 
 function copyMocks(harness) {
     // The published package does not contain test/, so the mocks have to be
@@ -284,6 +287,23 @@ tests.integration(path.join(__dirname, '..'), {
                 const devices = await sendToAdapter(harness, 'needsKey', null);
                 expect(devices).to.have.lengthOf(1);
                 expect(devices[0]).to.equal('KAM-63452869');
+            }).timeout(15000);
+
+            it('Test importNeedsKey', async () => {
+                // The list to merge into is the one in the open form, not the
+                // saved configuration: what the user has typed since the last
+                // save has to survive, and a saved key the running instance
+                // has not picked up yet must not disappear either
+                const typed = [{ id: 'ELS-7654321', key: 'FFF102030405060708090A0B0C0D0E0F' }];
+
+                const response = await sendToAdapter(harness, 'importNeedsKey', { aeskeys: typed });
+
+                expect(response.native.aeskeys).to.eql([
+                    { id: 'ELS-7654321', key: 'FFF102030405060708090A0B0C0D0E0F' },
+                    { id: 'KAM-63452869', key: 'UNKNOWN' },
+                ]);
+                expect(response.result).to.equal('devicesAdded');
+                expect(response.args).to.eql([1]);
             }).timeout(15000);
         });
 

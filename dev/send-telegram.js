@@ -8,7 +8,7 @@
  *
  *   --to <target>       tcp:[host:]port of the TCP receiver, or the path of a
  *                       pipe or virtual serial port read by the Simple
- *                       Hexstring receiver (default tcp:5000)
+ *                       Hexstring receiver (default tcp:5100)
  *   --frame-type <A|B>  frame type of the telegram (default A)
  *   --crc               the telegram carries the block CRCs
  *   --repeat <count>    send it more than once (default 1)
@@ -65,7 +65,7 @@ function usage(message) {
 }
 
 function parseArguments(argv) {
-    const options = { to: 'tcp:5000', repeat: 1, interval: 1000 };
+    const options = { to: 'tcp:5100', repeat: 1, interval: 1000 };
 
     while (argv.length) {
         const argument = argv.shift();

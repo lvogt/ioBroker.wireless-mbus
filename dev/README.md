@@ -17,7 +17,7 @@ local TCP port. Point the instance at it:
 
 ```bash
 cd .dev-server/default
-./iob object extend system.adapter.wireless-mbus.0 '{"native":{"deviceType":"tcp","serialPort":"5000"}}'
+./iob object extend system.adapter.wireless-mbus.0 '{"native":{"deviceType":"tcp","serialPort":"5100"}}'
 ./iob restart wireless-mbus.0
 ```
 
@@ -31,6 +31,9 @@ node dev/send-telegram.js 2C446532821851582C067AE1000000046D19 --frame-type B --
 
 Careful: saving the instance configuration in the admin UI overwrites `deviceType`, because `tcp`
 is not in the list of receivers it offers. Set it again with the command above.
+
+Port 5100 rather than 5000 on purpose: the integration test uses 5000, and a dev-server sitting on
+it makes `npm run test:integration` fail with `EADDRINUSE`.
 
 ## Feeding telegrams through a serial port
 
@@ -58,10 +61,17 @@ of that and hands the telegram straight to the parser.
 | `plain` | LSE-58511882, six data records, decodes without a key |
 | `volume` | CEN-12345678, a volume in m³, frame type B with CRCs |
 | `encrypted` | ELS-12345678, needs the key `000102030405060708090A0B0C0D0E0F` in the AES key list |
-| `unknown-key` | KAM-63452869, encrypted with a key nobody has - ends up in the "needs key" list |
+| `unknown-key` | KAM-63452869, encrypted with a key nobody has - the "Check for new devices that need a key" button offers it afterwards |
 
 `node dev/send-telegram.js --list` prints them, `--help` the options. Anything that is not a
 sample name is taken as a telegram in hex, and `--frame-type` and `--crc` then say how to read it.
+
+## Gotchas
+
+The adapter is **not** restarted when the instance configuration is saved while dev-server runs
+it, so `this.config` stays at what it was when the adapter started. Anything that answers from the
+saved configuration then answers with yesterday's news - restart it after a change, by touching a
+source file in watch mode or with `./iob restart wireless-mbus.0`.
 
 ## A busy installation
 
