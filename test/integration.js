@@ -5,6 +5,7 @@ const { expect } = require('chai');
 const net = require('node:net');
 
 const port = 5000;
+const culPort = 5099;
 
 function copyMocks(harness) {
     // The published package does not contain test/, so the mocks have to be
@@ -104,6 +105,48 @@ async function sendTelegram(telegram) {
     });
 }
 
+/**
+ * A receiver that answers the two commands a CUL sends while it initialises,
+ * and nothing else.
+ *
+ * @returns a function that stops it again - the adapter keeps its connection
+ * open, so the sockets have to go before the server can close
+ */
+async function startCulServer() {
+    /** @type {net.Socket[]} */
+    const sockets = [];
+
+    const server = net.createServer(socket => {
+        sockets.push(socket);
+        socket.on('data', data => {
+            const command = data.toString('ascii');
+            if (command.startsWith('V')) {
+                socket.write('V 1.30 CUL868\r\n');
+            } else if (command.includes('br')) {
+                socket.write('TMODE\r\n');
+            }
+        });
+    });
+
+    await new Promise(resolve => server.listen(culPort, '127.0.0.1', () => resolve(true)));
+
+    return async () => {
+        sockets.forEach(socket => socket.destroy());
+        await new Promise(resolve => server.close(() => resolve(true)));
+    };
+}
+
+async function prepareAdapterForCulOverTcp(harness) {
+    return new Promise(resolve =>
+        harness.objects.getObject('system.adapter.wireless-mbus.0', (err, obj) => {
+            obj.native.deviceType = 'cul';
+            obj.native.wmbusMode = 'T';
+            obj.native.serialPort = `tcp://127.0.0.1:${culPort}`;
+            harness.objects.setObject(obj._id, obj, () => resolve(true));
+        }),
+    );
+}
+
 tests.integration(path.join(__dirname, '..'), {
     allowedExitCodes: [11],
 
@@ -139,6 +182,54 @@ tests.integration(path.join(__dirname, '..'), {
                 expect(state.ack).to.be.true;
                 expect(state.val).to.equal(false);
             }).timeout(10000);
+        });
+
+        suite('Test reconnect', getHarness => {
+            it('connects on a later attempt once the receiver answers', async () => {
+                const harness = getHarness();
+                await prepareAdapterForCulOverTcp(harness);
+
+                // Nothing is listening yet, so the first attempt has to fail
+                await harness.startAdapterAndWait();
+                await delay(2500);
+                expect((await getState(harness, 'wireless-mbus.0.info.connection')).val).to.equal(false);
+
+                // The receiver comes back - the first retry is five seconds out
+                const stopCulServer = await startCulServer();
+                await delay(9000);
+
+                const connected = (await getState(harness, 'wireless-mbus.0.info.connection')).val;
+                await stopCulServer();
+
+                expect(connected, 'the adapter never tried again').to.equal(true);
+            }).timeout(40000);
+        });
+
+        suite('Test reconnect after a drop', getHarness => {
+            it('connects again after the connection was lost', async () => {
+                const harness = getHarness();
+                await prepareAdapterForCulOverTcp(harness);
+
+                let stopCulServer = await startCulServer();
+                await harness.startAdapterAndWait();
+                await delay(2500);
+                expect((await getState(harness, 'wireless-mbus.0.info.connection')).val).to.equal(true);
+
+                // The receiver goes away - and the adapter must notice, rather
+                // than reporting a connection it no longer has
+                await stopCulServer();
+                await delay(1500);
+                expect((await getState(harness, 'wireless-mbus.0.info.connection')).val).to.equal(false);
+
+                // ... and comes back
+                stopCulServer = await startCulServer();
+                await delay(9000);
+
+                const connected = (await getState(harness, 'wireless-mbus.0.info.connection')).val;
+                await stopCulServer();
+
+                expect(connected, 'the adapter did not come back').to.equal(true);
+            }).timeout(60000);
         });
 
         suite('Test sendTo()', getHarness => {

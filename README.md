@@ -90,6 +90,7 @@ Afterwards, when you delete the device from the object tree, the adapter will no
 * (ChL) Run the adapter tests only after linting and type checking succeeded
 * (ChL) Use the adapter's own timer functions, so pending timers are cleared when the adapter is unloaded
 * (ChL) Fix receivers getting stuck after disturbed reception: a damaged telegram no longer takes the following ones with it, and no longer leaves the adapter yellow until it is restarted by hand (#308, #309)
+* (ChL) The adapter reconnects to the receiver instead of staying idle or stopping when the connection fails
 
 ### 0.11.0 (2026-08-29)
 * (ChL) Require node.js 22 or newer, js-controller >=6.0.11 and admin >=7.6.20
