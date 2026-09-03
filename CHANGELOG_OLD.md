@@ -1,4 +1,7 @@
 # Older changes
+## 0.9.4
+* (ChL) Upgrade dependencies and general package stuff
+
 ## 0.9.3
 * (ChL) Fix handling of 64bit integer DIFs
 

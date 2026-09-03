@@ -102,8 +102,7 @@ supported now, and the first one of a meter no longer counts towards the automat
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-
-### **WORK IN PROGRESS**
+### 0.12.0 (2026-09-03)
 * (ChL) Replace the built-in telegram parser with the wireless-mbus-parser library
 * (ChL) New admin configuration UI (JSON config); a serial port can now simply be typed in, the separate "custom port" field is gone
 * (ChL) Fix shutdown of the adapter: a serial connection over TCP was not closed properly and could reconnect itself while the adapter was stopping
@@ -132,9 +131,6 @@ supported now, and the first one of a meter no longer counts towards the automat
 
 ### 0.10.0
 * (ChL) Add support for IMST iU891A-XL receiver
-
-### 0.9.4
-* (ChL) Upgrade dependencies and general package stuff
 
 [Older changelogs can be found there](CHANGELOG_OLD.md)
 
