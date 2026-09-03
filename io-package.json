@@ -201,7 +201,7 @@
       "_id": "info.rawdata",
       "type": "state",
       "common": {
-        "role": "value",
+        "role": "text",
         "name": "Telegram raw data if parser failed",
         "type": "string",
         "read": true,

@@ -114,12 +114,13 @@ class WirelessMbus extends utils.Adapter {
             _id: 'info.rawdata',
             type: 'state',
             common: {
-                role: 'value',
+                // "value" is for numbers - this one holds a telegram as hex
+                role: 'text',
                 name: 'Telegram raw data if parser failed',
                 type: 'string',
                 read: true,
                 write: false,
-                def: false,
+                def: '',
             },
             native: {},
         };
