@@ -60,6 +60,10 @@ class WirelessMbus extends utils.Adapter {
         this.parser = new WirelessMbusParser();
 
         this.failedDevices = [];
+        // Devices the automatic block list rejected, until the adapter is
+        // restarted. Kept apart from this.config, which stays what the user
+        // configured.
+        this.blockedDevices = new Set();
         this.needsKey = [];
 
         this.createdDevices = [];
@@ -296,7 +300,20 @@ class WirelessMbus extends utils.Adapter {
         }
     }
 
+    /**
+     * The callback the receivers report a telegram to. Nobody waits for it, so
+     * an exception in here would be an unhandled rejection - and adapter-core
+     * terminates the adapter over one of those.
+     */
     async dataReceived(data) {
+        try {
+            await this.handleTelegram(data);
+        } catch (error) {
+            this.log.error(`Error while handling a telegram: ${error}`);
+        }
+    }
+
+    async handleTelegram(data) {
         this.setConnected(true);
 
         const id = guessDeviceId(data.rawData);
@@ -386,34 +403,28 @@ class WirelessMbus extends utils.Adapter {
     }
 
     isDeviceBlocked(id) {
-        if (typeof this.config.blacklist === 'undefined' || !this.config.blacklist.length) {
+        if (this.blockedDevices.has(id)) {
+            return true;
+        }
+
+        if (!Array.isArray(this.config.blacklist)) {
             return false;
         }
 
-        const found = this.config.blacklist.find(item => {
-            if (typeof item.id === 'undefined') {
-                return false;
-            }
-            return item.id == id;
-        });
-
-        if (typeof found !== 'undefined') {
-            // found
-            return true;
-        }
-        return false;
+        return this.config.blacklist.some(item => typeof item.id !== 'undefined' && item.id == id);
     }
 
     checkAutoBlocklist(id) {
         const i = this.failedDevices.findIndex(dev => dev.id == id);
         if (i === -1) {
             this.failedDevices.push({ id: id, count: 1 });
-        } else {
-            this.failedDevices[i].count++;
-            if (this.failedDevices[i].count >= 10) {
-                this.config.blacklist.push({ id: id });
-                this.log.warn(`Device ${id} is now blocked until adapter restart!`);
-            }
+            return;
+        }
+
+        this.failedDevices[i].count++;
+        if (this.failedDevices[i].count >= 10 && !this.blockedDevices.has(id)) {
+            this.blockedDevices.add(id);
+            this.log.warn(`Device ${id} is now blocked until adapter restart!`);
         }
     }
 
@@ -484,7 +495,7 @@ class WirelessMbus extends utils.Adapter {
             await this.createDeviceObjects(deviceId, result);
         }
 
-        this.updateDeviceStates(deviceId, result);
+        await this.updateDeviceStates(deviceId, result);
     }
 
     async createDeviceObjects(deviceId, data) {

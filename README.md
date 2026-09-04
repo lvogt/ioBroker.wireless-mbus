@@ -102,6 +102,9 @@ supported now, and the first one of a meter no longer counts towards the automat
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (ChL) Fix the adapter stopping instead of blocking a device whose telegrams keep failing to decode
+
 ### 0.12.0 (2026-09-03)
 * (ChL) Replace the built-in telegram parser with the wireless-mbus-parser library
 * (ChL) New admin configuration UI (JSON config); a serial port can now simply be typed in, the separate "custom port" field is gone
