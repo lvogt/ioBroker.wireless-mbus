@@ -29,6 +29,10 @@ const { SerialPort } = require('serialport');
 // cache, so the first one from every device always fails.
 const EXPECTED_PARSER_ERRORS = ['DATA_RECORD_CACHE_MISSING'];
 
+// How many telegrams of a device may fail to decode before the automatic
+// block list rejects it
+const AUTO_BLOCK_AFTER_FAILURES = 10;
+
 // Delays between two attempts to connect to the receiver (msec). The first
 // ones are quick, because the usual reason for a failed start is a telegram
 // that was in flight; a receiver that stays away is asked every five minutes.
@@ -59,14 +63,16 @@ class WirelessMbus extends utils.Adapter {
         // telegrams.
         this.parser = new WirelessMbusParser();
 
-        this.failedDevices = [];
+        // Device id -> how many of its telegrams failed to decode in a row
+        this.failedDevices = new Map();
         // Devices the automatic block list rejected, until the adapter is
         // restarted. Kept apart from this.config, which stays what the user
         // configured.
         this.blockedDevices = new Set();
-        this.needsKey = [];
+        // Devices that asked for a key the configuration does not have
+        this.needsKey = new Set();
 
-        this.createdDevices = [];
+        this.createdDevices = new Set();
         this.stateValues = {};
     }
 
@@ -133,7 +139,7 @@ class WirelessMbus extends utils.Adapter {
         if (typeof this.config.aeskeys !== 'undefined') {
             this.config.aeskeys.forEach(item => {
                 if (item.key === 'UNKNOWN') {
-                    this.needsKey.push(item.id);
+                    this.needsKey.add(item.id);
                 }
             });
         }
@@ -287,16 +293,18 @@ class WirelessMbus extends utils.Adapter {
         this.scheduleReconnect();
     }
 
-    setConnected(isConnected) {
-        if (this.connected !== isConnected) {
-            this.connected = isConnected;
-            this.setState('info.connection', this.connected, true, err => {
-                if (err) {
-                    this.log.error(`Can not update connected state: ${err}`);
-                } else {
-                    this.log.debug(`connected set to ${this.connected}`);
-                }
-            });
+    async setConnected(isConnected) {
+        if (this.connected === isConnected) {
+            return;
+        }
+
+        this.connected = isConnected;
+
+        try {
+            await this.setStateAsync('info.connection', this.connected, true);
+            this.log.debug(`connected set to ${this.connected}`);
+        } catch (error) {
+            this.log.error(`Can not update connected state: ${error}`);
         }
     }
 
@@ -415,83 +423,44 @@ class WirelessMbus extends utils.Adapter {
     }
 
     checkAutoBlocklist(id) {
-        const i = this.failedDevices.findIndex(dev => dev.id == id);
-        if (i === -1) {
-            this.failedDevices.push({ id: id, count: 1 });
-            return;
-        }
+        const failures = (this.failedDevices.get(id) ?? 0) + 1;
+        this.failedDevices.set(id, failures);
 
-        this.failedDevices[i].count++;
-        if (this.failedDevices[i].count >= 10 && !this.blockedDevices.has(id)) {
+        if (failures >= AUTO_BLOCK_AFTER_FAILURES && !this.blockedDevices.has(id)) {
             this.blockedDevices.add(id);
             this.log.warn(`Device ${id} is now blocked until adapter restart!`);
         }
     }
 
     resetAutoBlocklist(id) {
-        const i = this.failedDevices.findIndex(dev => dev.id == id);
-        if (i !== -1 && this.failedDevices[i].count) {
-            this.failedDevices[i].count = 0;
-        }
+        this.failedDevices.delete(id);
     }
 
     checkWrongKey(id, errorName) {
         if (errorName === 'NO_AES_KEY') {
-            if (typeof this.needsKey.find(el => el == id) === 'undefined') {
-                this.needsKey.push(id);
-            }
+            this.needsKey.add(id);
         }
     }
 
+    /**
+     * The configured key of a device. A configured id that the device id only
+     * starts with counts as well, so one row can stand for a series of
+     * meters - and the longest of them wins, which makes the exact match the
+     * best possible one.
+     */
     getAesKey(id) {
-        if (typeof this.config.aeskeys === 'undefined' || !this.config.aeskeys.length) {
+        const rows = Array.isArray(this.config.aeskeys) ? this.config.aeskeys : [];
+        const candidates = rows.filter(row => typeof row.id !== 'undefined' && id.startsWith(row.id));
+
+        if (!candidates.length) {
             return undefined;
         }
 
-        // look for perfect match
-        const perfectMatch = this.config.aeskeys.find(item => {
-            if (typeof item.id === 'undefined') {
-                return false;
-            }
-            return item.id == id;
-        });
-
-        if (typeof perfectMatch !== 'undefined') {
-            // found
-            return perfectMatch.key;
-        }
-
-        // which device names start with our id
-        const candidates = this.config.aeskeys.filter(item => {
-            if (typeof item.id === 'undefined') {
-                return false;
-            }
-            return id.startsWith(item.id);
-        });
-
-        if (candidates.length == 1) {
-            // only 1 match - take it
-            return candidates[0].key;
-        }
-
-        if (candidates.length > 1) {
-            // more than one, find the best
-            let len = candidates[0].id.length;
-            let pos = 0;
-            for (let i = 1; i < candidates.length; i++) {
-                if (candidates[i].id.length > len) {
-                    len = candidates[i].id.length;
-                    pos = i;
-                }
-            }
-            return candidates[pos].key;
-        }
-
-        return undefined;
+        return candidates.reduce((longest, row) => (row.id.length > longest.id.length ? row : longest)).key;
     }
 
     async updateDevice(deviceId, result) {
-        if (this.createdDevices.indexOf(deviceId) == -1) {
+        if (!this.createdDevices.has(deviceId)) {
             await this.createDeviceObjects(deviceId, result);
         }
 
@@ -514,7 +483,7 @@ class WirelessMbus extends utils.Adapter {
             await this.objectHelper.createDataState(deviceId, item);
         }
 
-        this.createdDevices.push(deviceId);
+        this.createdDevices.add(deviceId);
     }
 
     async updateDeviceStates(deviceId, data) {
@@ -656,7 +625,8 @@ class WirelessMbus extends utils.Adapter {
                     this.sendTo(obj.from, obj.command, this.importNeedsKeyNative(obj.message), obj.callback);
                     break;
                 case 'needsKey':
-                    this.sendTo(obj.from, obj.command, this.needsKey, obj.callback);
+                    // A Set does not survive the message box
+                    this.sendTo(obj.from, obj.command, [...this.needsKey], obj.callback);
                     break;
             }
         }
