@@ -24,9 +24,9 @@ cd .dev-server/default
 Then, from the adapter directory:
 
 ```bash
-node dev/send-telegram.js plain
-node dev/send-telegram.js volume
-node dev/send-telegram.js 2C446532821851582C067AE1000000046D19 --frame-type B --crc
+node tools/send-telegram.js plain
+node tools/send-telegram.js volume
+node tools/send-telegram.js 2C446532821851582C067AE1000000046D19 --frame-type B --crc
 ```
 
 Careful: saving the instance configuration in the admin UI overwrites `deviceType`, because `tcp`
@@ -48,7 +48,7 @@ Configure the instance for "Simple Hexstring" with `/tmp/wmbus-port` as its seri
 receiver *is* in the UI, so the setting survives saving the configuration - and feed it:
 
 ```bash
-node dev/send-telegram.js plain --to /tmp/wmbus-feed
+node tools/send-telegram.js plain --to /tmp/wmbus-feed
 ```
 
 This is the way that also exercises the line extraction of a receiver. The TCP receiver skips all
@@ -63,7 +63,7 @@ of that and hands the telegram straight to the parser.
 | `encrypted` | ELS-12345678, needs the key `000102030405060708090A0B0C0D0E0F` in the AES key list |
 | `unknown-key` | KAM-63452869, encrypted with a key nobody has - the "Check for new devices that need a key" button offers it afterwards |
 
-`node dev/send-telegram.js --list` prints them, `--help` the options. Anything that is not a
+`node tools/send-telegram.js --list` prints them, `--help` the options. Anything that is not a
 sample name is taken as a telegram in hex, and `--frame-type` and `--crc` then say how to read it.
 
 ## Gotchas
@@ -84,7 +84,7 @@ source file in watch mode or with `./iob restart wireless-mbus.0`.
 Issue #308 is about what happens when many meters transmit at the same time:
 
 ```bash
-node dev/send-telegram.js plain --repeat 25 --interval 0
+node tools/send-telegram.js plain --repeat 25 --interval 0
 ```
 
 For the framing of a particular receiver, the tests are the better tool: `npm run test:unit`

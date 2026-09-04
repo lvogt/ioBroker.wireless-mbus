@@ -2,9 +2,9 @@
 'use strict';
 
 /*
- * Feed telegrams into a running adapter - see dev/README.md.
+ * Feed telegrams into a running adapter - see tools/README.md.
  *
- *   node dev/send-telegram.js <sample|hex> [options]
+ *   node tools/send-telegram.js <sample|hex> [options]
  *
  *   --to <target>       tcp:[host:]port of the TCP receiver, or the path of a
  *                       pipe or virtual serial port read by the Simple
