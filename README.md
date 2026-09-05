@@ -115,8 +115,8 @@ battery life of a PRIOS meter is reported in months rather than in years.
     ### **WORK IN PROGRESS**
 -->
 ### **WORK IN PROGRESS**
-* (ChL) Fix the adapter stopping instead of blocking a device whose telegrams keep failing to decode
 * (ChL) Fix Techem and Diehl (PRIOS) meters, which 0.12.0 decoded wrongly or not at all - the states it wrote for them carry wrong names and values and can be deleted
+* (ChL) Fix the adapter stopping instead of blocking a device whose telegrams keep failing to decode
 * (ChL) A 64 bit measured value with a scaling factor is a number now, like every other measured value
 
 ### 0.12.0 (2026-09-03)

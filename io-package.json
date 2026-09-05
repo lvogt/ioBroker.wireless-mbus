@@ -122,6 +122,32 @@
           "agree",
           "cancel"
         ]
+      },
+      {
+        "condition": {
+          "operand": "and",
+          "rules": [
+            "oldVersion==0.12.0",
+            "installed"
+          ]
+        },
+        "level": "warn",
+        "title": {
+          "en": "Techem and Diehl (PRIOS) meters",
+          "de": "Techem- und Diehl-Zähler (PRIOS)"
+        },
+        "text": {
+          "en": "Version 0.12.0 decoded these two wrongly: a Techem heat cost allocator reported nonsense, a Techem heat meter could not be read at all and ended up on the automatic block list, and a Diehl water meter reported its volume under the wrong name. This version reads them correctly again. The states 0.12.0 wrote for such a meter keep their wrong names and values and can be deleted - the right ones are written with the next telegram.",
+          "de": "Version 0.12.0 hat diese beiden falsch dekodiert: Ein Techem-Heizkostenverteiler lieferte Unsinn, ein Techem-Wärmezähler ließ sich gar nicht lesen und landete auf der automatischen Blockliste, und ein Diehl-Wasserzähler meldete sein Volumen unter dem falschen Namen. Diese Version liest sie wieder korrekt. Die Datenpunkte, die 0.12.0 für solche Zähler angelegt hat, behalten ihre falschen Namen und Werte und können gelöscht werden - die richtigen werden mit dem nächsten Telegramm geschrieben."
+        },
+        "link": "https://github.com/lvogt/ioBroker.wireless-mbus#techem-and-diehl-prios-meters",
+        "linkText": {
+          "en": "Update notes",
+          "de": "Update-Hinweise"
+        },
+        "buttons": [
+          "ok"
+        ]
       }
     ],
     "titleLang": {
