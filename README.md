@@ -118,6 +118,7 @@ battery life of a PRIOS meter is reported in months rather than in years.
 ### **WORK IN PROGRESS**
 * (ChL) Add an option to only handle devices that already have an object tree, so that no new devices are created and no telegram of a device without one is reported
 * (ChL) Remember the record layout of a device, so that its compact telegrams are decoded right after a restart of the adapter
+* (ChL) Update wireless-mbus-parser to 1.3.1, which fixes the date of the current reading of a Techem meter - it used to be stamped with the year it was decoded in rather than with the year of the meter
 * (ChL) Report at the log level the message deserves: a receiver that stays away no longer writes an error with every attempt, what the hardware says about itself is a warning, and the noise of the air is debug
 
 ### 0.12.1 (2026-09-05)

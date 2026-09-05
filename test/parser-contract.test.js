@@ -213,6 +213,13 @@ describe('Parser contract: manufacturer specific telegrams', () => {
         expect(result.dataRecord[1].value).to.equal(117);
         expect(Number(result.dataRecord[4].value)).to.be.closeTo(27.02, 0.01);
         expect(result.dataRecord[4].unit).to.equal('°C');
+        // A Techem telegram names the day and the month of the current
+        // reading, but not its year: it is the one of the period date, which
+        // is what makes these two dates the same every time. Up to parser
+        // 1.3.0 the current date got the year of the day it was decoded, so it
+        // was wrong for most of the year - and it changed on new year's eve.
+        expect(result.dataRecord[0].value).to.equal('2018-12-31');
+        expect(result.dataRecord[2].value).to.equal('2019-06-25');
     });
 
     it('Techem heat meter', async () => {
@@ -232,6 +239,8 @@ describe('Parser contract: manufacturer specific telegrams', () => {
         ]);
         expect(result.dataRecord[4].value).to.equal(495000);
         expect(result.dataRecord[4].unit).to.equal('Wh');
+        expect(result.dataRecord[0].value).to.equal('2019-12-31');
+        expect(result.dataRecord[2].value).to.equal('2020-12-20');
     });
 
     it('Techem heat meter with a current period energy above 16 bit', async () => {
