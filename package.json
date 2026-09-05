@@ -40,7 +40,8 @@
     "admin/i18n/",
     "lib/receiver/*.js",
     "lib/SimpleLogger.js",
-    "lib/ObjectHelper.js"
+    "lib/ObjectHelper.js",
+    "lib/DeviceRegistry.js"
   ],
   "devDependencies": {
     "@alcalzone/release-script": "^5.2.1",

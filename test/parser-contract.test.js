@@ -311,4 +311,45 @@ describe('Parser contract: compact frames', () => {
         const fresh = new WirelessMbusParser();
         expect(await parseErrorName(fresh, short)).to.equal('DATA_RECORD_CACHE_MISSING');
     });
+
+    /*
+     * The adapter stores the layout of every full telegram with the device and
+     * hands the stored ones to a new parser, which is what decodes a compact
+     * telegram that arrives before the meter sent a full one again.
+     */
+    it('hands out the layout of a full frame, even one it did not cache itself', async () => {
+        const parser = new WirelessMbusParser();
+        const full = await parser.parse(Buffer.from(long, 'hex'), { verbose: true, containsCrc: false });
+        const entry = WirelessMbusParser.getDataRecordHeadersCacheEntry(full);
+
+        // nothing asked for this layout yet, so the parser itself kept nothing
+        expect(parser.cache).to.be.empty;
+        expect(entry.crc).to.equal(full.dataRecordHeadersCrc);
+        expect(entry.cachedDataRecordHeaders).to.have.lengthOf(13);
+    });
+
+    it('decodes the first compact frame with a layout that came back from an object', async () => {
+        const source = new WirelessMbusParser();
+        const full = await source.parse(Buffer.from(long, 'hex'), { verbose: true, containsCrc: false });
+
+        // what a device object stores and gives back after a restart
+        const stored = JSON.parse(JSON.stringify(WirelessMbusParser.getDataRecordHeadersCacheEntry(full)));
+        const parser = new WirelessMbusParser({ cachedDataRecordHeaders: [stored] });
+
+        const compact = await parse(parser, short);
+        expect(compact.dataRecord).to.have.lengthOf(13);
+        expect(Number(compact.dataRecord[12].value)).to.be.closeTo(28.44, 0.01);
+    });
+
+    it('refuses a stored layout of an unknown version', () => {
+        // which is why the adapter checks what it read from the object before
+        // it hands it over - one bad entry would cost every device its layouts
+        expect(
+            () =>
+                new WirelessMbusParser({
+                    // @ts-expect-error the point of the test is a version the parser does not know
+                    cachedDataRecordHeaders: [{ crc: 1, version: 'v2', cachedDataRecordHeaders: [] }],
+                }),
+        ).to.throw();
+    });
 });

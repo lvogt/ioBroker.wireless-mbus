@@ -21,6 +21,7 @@ const utils = require('@iobroker/adapter-core');
 const { WirelessMbusParser, guessDeviceId } = require('wireless-mbus-parser');
 const { listReceivers, getReceiver } = require('./lib/receiver');
 const ObjectHelper = require('./lib/ObjectHelper.js');
+const DeviceRegistry = require('./lib/DeviceRegistry.js');
 const { SerialPort } = require('serialport');
 
 // Parse errors that are expected during normal operation and must not count
@@ -60,7 +61,8 @@ class WirelessMbus extends utils.Adapter {
         this.reconnectAttempts = 0;
         // One long lived instance: the parser caches data record headers per
         // instance to decode compact frames, so it must survive between
-        // telegrams.
+        // telegrams. onReady() replaces it with one that knows the record
+        // layouts of the devices that already exist.
         this.parser = new WirelessMbusParser();
 
         // Device id -> how many of its telegrams failed to decode in a row
@@ -74,9 +76,10 @@ class WirelessMbus extends utils.Adapter {
 
         // Devices whose objects have been created or verified in this run
         this.createdDevices = new Set();
-        // Devices that have an object tree, which is what
-        // "ignoreUnknownDevices" goes by
-        this.knownDevices = new Set();
+        // The devices that have an object tree - which is what
+        // "ignoreUnknownDevices" goes by - and the record layouts of their
+        // telegrams
+        this.deviceRegistry = new DeviceRegistry();
         this.stateValues = {};
     }
 
@@ -159,9 +162,9 @@ class WirelessMbus extends utils.Adapter {
     /**
      * Take over the devices that already have an object tree.
      *
-     * They are what "ignoreUnknownDevices" decides by, and the object database
-     * is the only place where they survive a restart - so this has to happen
-     * before the receiver is opened.
+     * They are what "ignoreUnknownDevices" decides by, and their objects are
+     * the only place where the record layouts of their telegrams survive a
+     * restart - so this has to happen before the receiver is opened.
      */
     async loadKnownDevices() {
         /** @type {ioBroker.DeviceObject[]} */
@@ -174,10 +177,29 @@ class WirelessMbus extends utils.Adapter {
         }
 
         for (const device of devices) {
-            this.knownDevices.add(device._id.substring(this.namespace.length + 1));
+            this.deviceRegistry.add(device._id.substring(this.namespace.length + 1), device.native);
         }
 
         this.log.debug(`Found ${devices.length} device(s) with an object tree`);
+        this.parser = this.createParser();
+    }
+
+    /**
+     * A parser that knows the record layouts of all known devices, so that a
+     * compact telegram is decoded right away rather than after the next full
+     * telegram of the same meter.
+     */
+    createParser() {
+        const cachedDataRecordHeaders = this.deviceRegistry.layouts();
+
+        try {
+            return new WirelessMbusParser({ cachedDataRecordHeaders });
+        } catch (error) {
+            // A stored layout the parser rejects must not cost the adapter its
+            // ability to receive anything at all
+            this.log.warn(`Stored data record headers were rejected by the parser: ${error}`);
+            return new WirelessMbusParser();
+        }
     }
 
     /**
@@ -373,10 +395,11 @@ class WirelessMbus extends utils.Adapter {
 
         const key = this.getAesKeyBuffer(id);
 
+        let parsed;
         let result;
         try {
             // verbose is required by toLegacyResult()
-            const parsed = await this.parser.parse(data.rawData, {
+            parsed = await this.parser.parse(data.rawData, {
                 verbose: true,
                 containsCrc: data.containsCrc,
                 key: key,
@@ -391,12 +414,35 @@ class WirelessMbus extends utils.Adapter {
 
         const deviceId = `${result.deviceInformation.Manufacturer}-${result.deviceInformation.Id}`;
 
-        if (this.config.ignoreUnknownDevices && !this.knownDevices.has(deviceId)) {
+        if (this.config.ignoreUnknownDevices && !this.deviceRegistry.has(deviceId)) {
             this.log.debug(`Device has no object tree and is ignored: ${deviceId}`);
             return;
         }
 
         await this.updateDevice(deviceId, result);
+        await this.rememberDataRecordHeaders(deviceId, parsed);
+    }
+
+    /**
+     * Keep the layout of the data records of a telegram with the device, so
+     * that its compact telegrams can be decoded after a restart.
+     *
+     * @param {string} deviceId
+     * @param {import('wireless-mbus-parser').ParserResultVerbose} parsed
+     */
+    async rememberDataRecordHeaders(deviceId, parsed) {
+        const layout = WirelessMbusParser.getDataRecordHeadersCacheEntry(parsed);
+
+        if (!this.deviceRegistry.learnLayout(deviceId, layout)) {
+            return;
+        }
+
+        // The parser takes record layouts when it is created, and it keeps the
+        // ones it decodes itself only after a compact telegram has asked for
+        // them - so replace it with one that knows all of them, which is what
+        // decodes the next compact telegram of this meter.
+        this.parser = this.createParser();
+        await this.objectHelper.updateDeviceNative(deviceId, this.deviceRegistry.nativeOf(deviceId));
     }
 
     handleParserError(id, data, error) {
@@ -417,7 +463,7 @@ class WirelessMbus extends utils.Adapter {
         // dropped, so one that does not must not be reported either. The
         // address is the one of the link layer, because a telegram that failed
         // has told nothing else about itself.
-        const muted = this.config.ignoreUnknownDevices && !this.knownDevices.has(id);
+        const muted = this.config.ignoreUnknownDevices && !this.deviceRegistry.has(id);
 
         if (this.config.autoBlocklist) {
             // Worth it either way - it saves the decoding of every telegram
@@ -544,7 +590,7 @@ class WirelessMbus extends utils.Adapter {
         }
 
         this.createdDevices.add(deviceId);
-        this.knownDevices.add(deviceId);
+        this.deviceRegistry.add(deviceId);
     }
 
     async updateDeviceStates(deviceId, data) {

@@ -51,7 +51,7 @@ From version 0.9.0 on, the adapter also supports to connect to serial devices re
 * **Temporarily block device after consecutive failures**: If 10 consecutive telegrams of the same device are not parsed successfully the device will be ignored until adapter restart (default: on)
 * **Only handle devices that already have an object tree**: Telegrams of devices that do not have an object tree yet are ignored, so no new devices are created - useful once every meter you care about has been set up. Telegrams that cannot be decoded at all are ignored just as well: they do not add a device to the AES key list and they are not written to `info.rawdata`. The automatic block list still counts them, so that an unwanted device stops costing a decoding attempt - it just does not say so in the log. The devices are looked up when the adapter starts, so a device you delete from the object tree is gone for good after the next restart, and a device that should be picked up again needs one as well. (default: off)
 
-Compact telegrams (used by some Kamstrup devices) are supported automatically: the structure of a full telegram is remembered and reused to decode the compact ones. The very first compact telegram of a device therefore cannot be decoded yet and is silently skipped until a matching full telegram has been received.
+Compact telegrams (used by some Kamstrup devices) are supported automatically: the structure of a full telegram is remembered - with the device, so that it survives a restart of the adapter - and reused to decode the compact ones. Only the compact telegrams a device sends before it has sent a full one for the first time cannot be decoded and are silently skipped.
 
 
 ### AES keys
@@ -117,6 +117,7 @@ battery life of a PRIOS meter is reported in months rather than in years.
 -->
 ### **WORK IN PROGRESS**
 * (ChL) Add an option to only handle devices that already have an object tree, so that no new devices are created and no telegram of a device without one is reported
+* (ChL) Remember the record layout of a device, so that its compact telegrams are decoded right after a restart of the adapter
 
 ### 0.12.1 (2026-09-05)
 * (ChL) Fix Techem and Diehl (PRIOS) meters, which 0.12.0 decoded wrongly or not at all - the states it wrote for them carry wrong names and values and can be deleted

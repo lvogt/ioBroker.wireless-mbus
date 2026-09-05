@@ -1,6 +1,7 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const { tests } = require('@iobroker/testing');
+const { WirelessMbusParser } = require('wireless-mbus-parser');
 const { expect } = require('chai');
 const net = require('node:net');
 
@@ -47,14 +48,23 @@ async function prepareAdapter(harness, native = {}) {
 }
 
 /** A device object as an earlier run of the adapter would have left it behind */
-function createDeviceObject(harness, deviceId) {
+function createDeviceObject(harness, deviceId, native = {}) {
     return new Promise((resolve, reject) =>
         harness.objects.setObject(
             `wireless-mbus.0.${deviceId}`,
-            { type: 'device', common: { name: deviceId }, native: {} },
+            { type: 'device', common: { name: deviceId }, native },
             err => (err ? reject(new Error(`Error return ${err}`)) : resolve(true)),
         ),
     );
+}
+
+/** The record layout of a telegram, as the adapter stores it with the device */
+async function dataRecordHeadersOf(telegram) {
+    const parsed = await new WirelessMbusParser().parse(Buffer.from(telegram, 'hex'), {
+        verbose: true,
+        containsCrc: false,
+    });
+    return WirelessMbusParser.getDataRecordHeadersCacheEntry(parsed);
 }
 
 async function prepareAdapterWithMock(harness, mockType, forceFail) {
@@ -425,6 +435,55 @@ tests.integration(path.join(__dirname, '..'), {
                 const rawdata = await getState(harness, 'wireless-mbus.0.info.rawdata');
                 expect(rawdata && rawdata.val, 'the telegram of an unknown device was published').to.not.be.ok;
             }).timeout(30000);
+        });
+
+        suite('Test compact telegrams', getHarness => {
+            // A Kamstrup meter, whose compact telegram carries no more than a
+            // signature of the record layout - the layout itself is the one of
+            // the full telegram before it.
+            const full =
+                '5C442D2C06357260190C8D207B70032F21271D7802F9FF15011104061765000004EEFF07BFA8000004EEFF08D24F00000414B1FB000002FD170000026CE919426CFF184406F76400004414E8FA0000043B0B0000000259DB11025D1C0B5B';
+
+            it('keeps the record layout of a full telegram with the device', async () => {
+                const harness = getHarness();
+
+                await prepareAdapter(harness);
+                await harness.startAdapterAndWait();
+
+                await sendTelegram({ frameType: 'A', containsCrc: false, data: full });
+                await delay(2000);
+
+                const device = await getObject(harness, 'wireless-mbus.0.KAM-60723506');
+                expect(device.native.dataRecordHeaders).to.eql([await dataRecordHeadersOf(full)]);
+            }).timeout(15000);
+        });
+
+        suite('Test compact telegrams', getHarness => {
+            const full =
+                '5C442D2C06357260190C8D207B70032F21271D7802F9FF15011104061765000004EEFF07BFA8000004EEFF08D24F00000414B1FB000002FD170000026CE919426CFF184406F76400004414E8FA0000043B0B0000000259DB11025D1C0B5B';
+            const compact =
+                '3F442D2C06357260190C8D207C71032F21255C79DD829283011117650000BFA80000D24F0000B1FB00000000E919FF18F7640000E8FA00000B000000DB111C0B5B';
+
+            it('decodes a compact telegram with the layout a device object kept', async () => {
+                const harness = getHarness();
+
+                await prepareAdapter(harness);
+                // what the adapter left behind when it last saw a full
+                // telegram of this meter - the state after a restart
+                await createDeviceObject(harness, 'KAM-60723506', {
+                    dataRecordHeaders: [await dataRecordHeadersOf(full)],
+                });
+                await harness.startAdapterAndWait();
+
+                // The parser of this run has never seen a full telegram of the
+                // meter, so without the stored layout the telegram is dropped
+                await sendTelegram({ frameType: 'A', containsCrc: false, data: compact });
+                await delay(2000);
+
+                const temperature = await getState(harness, 'wireless-mbus.0.KAM-60723506.data.13-0-VIF_RETURN_TEMP');
+                expect(temperature, 'the compact telegram was dropped').to.not.be.null;
+                expect(temperature.val).to.be.closeTo(28.44, 0.01);
+            }).timeout(15000);
         });
 
         suite('Other tests', getHarness => {
