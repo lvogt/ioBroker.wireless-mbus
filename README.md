@@ -115,7 +115,7 @@ battery life of a PRIOS meter is reported in months rather than in years.
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.12.2 (2026-09-05)
 * (ChL) Add an option to only handle devices that already have an object tree, so that no new devices are created and no telegram of a device without one is reported
 * (ChL) Remember the record layout of a device, so that its compact telegrams are decoded right after a restart of the adapter
 * (ChL) Update wireless-mbus-parser to 1.3.1, which fixes the date of the current reading of a Techem meter - it used to be stamped with the year it was decoded in rather than with the year of the meter
@@ -149,9 +149,6 @@ battery life of a PRIOS meter is reported in months rather than in years.
 
 ### 0.10.2
 * (ChL) Improve robustness of IMST iU891A-XL communication
-
-### 0.10.1
-* (ChL) Fix SLIP encoder used by IMST iU891A-XL
 
 [Older changelogs can be found there](CHANGELOG_OLD.md)
 

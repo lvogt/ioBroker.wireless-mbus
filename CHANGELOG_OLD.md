@@ -1,4 +1,7 @@
 # Older changes
+## 0.10.1
+* (ChL) Fix SLIP encoder used by IMST iU891A-XL
+
 ## 0.10.0
 * (ChL) Add support for IMST iU891A-XL receiver
 
