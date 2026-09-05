@@ -27,7 +27,7 @@ function copyMocks(harness) {
     });
 }
 
-async function prepareAdapter(harness) {
+async function prepareAdapter(harness, native = {}) {
     try {
         await harness.objects.getObject('system.adapter.wireless-mbus.0', async (err, obj) => {
             obj.native.deviceType = 'TcpReceiver.js';
@@ -38,11 +38,23 @@ async function prepareAdapter(harness) {
                 { id: 'RAD-112233', key: '000102030405060708090A0B0C0D0E0F' },
             ];
             obj.native.blacklist = [{ id: 'SEN-20222542' }];
+            Object.assign(obj.native, native);
             harness.objects.setObject(obj._id, obj);
         });
     } catch (e) {
         console.dir(e);
     }
+}
+
+/** A device object as an earlier run of the adapter would have left it behind */
+function createDeviceObject(harness, deviceId) {
+    return new Promise((resolve, reject) =>
+        harness.objects.setObject(
+            `wireless-mbus.0.${deviceId}`,
+            { type: 'device', common: { name: deviceId }, native: {} },
+            err => (err ? reject(new Error(`Error return ${err}`)) : resolve(true)),
+        ),
+    );
 }
 
 async function prepareAdapterWithMock(harness, mockType, forceFail) {
@@ -366,6 +378,53 @@ tests.integration(path.join(__dirname, '..'), {
                 expect(obj.type).to.equal('device');
                 expect(obj.common.name).to.equal('ELS-12345678');
             }).timeout(10000);
+        });
+
+        suite('Test unknown devices', getHarness => {
+            it('only handles devices that already have an object tree', async () => {
+                const harness = getHarness();
+
+                await prepareAdapter(harness, { ignoreUnknownDevices: true });
+                // the devices of the object tree are read when the adapter
+                // starts, so this one has to be there before
+                await createDeviceObject(harness, 'LSE-58511882');
+                await harness.startAdapterAndWait();
+
+                await sendTelegram({
+                    frameType: 'A',
+                    containsCrc: false,
+                    data: '2C446532821851582C067AE1000000046D1906D9180C1334120000426CBF1C4C1300000000326CFFFF01FD7300',
+                });
+                await delay(2000);
+
+                const known = await getState(harness, 'wireless-mbus.0.LSE-58511882.data.2-0-VIF_VOLUME');
+                expect(known.val, 'the known device was not updated').to.be.closeTo(1.234, 0.001);
+
+                await sendTelegram({
+                    frameType: 'B',
+                    containsCrc: true,
+                    data: '1444AE0C7856341201078C2027780B134365877AC5',
+                });
+                await delay(2000);
+
+                const unknown = await getObject(harness, 'wireless-mbus.0.CEN-12345678');
+                expect(unknown, 'the unknown device should not have been created').to.be.null;
+
+                // ... and a device the adapter cannot decode is just as much
+                // none of the user's business
+                await sendTelegram({
+                    frameType: 'A',
+                    containsCrc: false,
+                    data: '24442D2C692845631B168D3050209CD621B006B1140AEF4953AE5B86FAFC0B00E70705B84689',
+                });
+                await delay(2000);
+
+                const waiting = await sendToAdapter(harness, 'needsKey', null);
+                expect(waiting, 'an unknown device was queued for a key').to.be.empty;
+
+                const rawdata = await getState(harness, 'wireless-mbus.0.info.rawdata');
+                expect(rawdata && rawdata.val, 'the telegram of an unknown device was published').to.not.be.ok;
+            }).timeout(30000);
         });
 
         suite('Other tests', getHarness => {

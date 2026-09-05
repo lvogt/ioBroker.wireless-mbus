@@ -72,7 +72,11 @@ class WirelessMbus extends utils.Adapter {
         // Devices that asked for a key the configuration does not have
         this.needsKey = new Set();
 
+        // Devices whose objects have been created or verified in this run
         this.createdDevices = new Set();
+        // Devices that have an object tree, which is what
+        // "ignoreUnknownDevices" goes by
+        this.knownDevices = new Set();
         this.stateValues = {};
     }
 
@@ -144,10 +148,36 @@ class WirelessMbus extends utils.Adapter {
             });
         }
 
+        await this.loadKnownDevices();
+
         this.receivers = listReceivers();
         this.setConnected(false);
 
         await this.connectReceiver();
+    }
+
+    /**
+     * Take over the devices that already have an object tree.
+     *
+     * They are what "ignoreUnknownDevices" decides by, and the object database
+     * is the only place where they survive a restart - so this has to happen
+     * before the receiver is opened.
+     */
+    async loadKnownDevices() {
+        /** @type {ioBroker.DeviceObject[]} */
+        let devices = [];
+
+        try {
+            devices = await this.getDevicesAsync();
+        } catch (error) {
+            this.log.warn(`Could not read the devices that already exist: ${error}`);
+        }
+
+        for (const device of devices) {
+            this.knownDevices.add(device._id.substring(this.namespace.length + 1));
+        }
+
+        this.log.debug(`Found ${devices.length} device(s) with an object tree`);
     }
 
     /**
@@ -360,6 +390,12 @@ class WirelessMbus extends utils.Adapter {
         this.resetAutoBlocklist(id);
 
         const deviceId = `${result.deviceInformation.Manufacturer}-${result.deviceInformation.Id}`;
+
+        if (this.config.ignoreUnknownDevices && !this.knownDevices.has(deviceId)) {
+            this.log.debug(`Device has no object tree and is ignored: ${deviceId}`);
+            return;
+        }
+
         await this.updateDevice(deviceId, result);
     }
 
@@ -375,8 +411,23 @@ class WirelessMbus extends utils.Adapter {
         }
 
         this.log.debug(`Parser failed to parse telegram from device ${id}: ${name} - ${error && error.message}`);
+
+        // A device without an object tree is none of the user's business while
+        // "ignoreUnknownDevices" is on: a telegram of one that decodes is
+        // dropped, so one that does not must not be reported either. The
+        // address is the one of the link layer, because a telegram that failed
+        // has told nothing else about itself.
+        const muted = this.config.ignoreUnknownDevices && !this.knownDevices.has(id);
+
         if (this.config.autoBlocklist) {
-            this.checkAutoBlocklist(id);
+            // Worth it either way - it saves the decoding of every telegram
+            // the device sends from now on - but a device nobody wants to hear
+            // about is blocked without a word.
+            this.checkAutoBlocklist(id, muted);
+        }
+
+        if (muted) {
+            return;
         }
 
         this.setState('info.rawdata', data.rawData.toString('hex'), true);
@@ -422,13 +473,22 @@ class WirelessMbus extends utils.Adapter {
         return this.config.blacklist.some(item => typeof item.id !== 'undefined' && item.id == id);
     }
 
-    checkAutoBlocklist(id) {
+    /**
+     * @param {string} id
+     * @param {boolean} [quiet] report the block in the debug log only
+     */
+    checkAutoBlocklist(id, quiet = false) {
         const failures = (this.failedDevices.get(id) ?? 0) + 1;
         this.failedDevices.set(id, failures);
 
         if (failures >= AUTO_BLOCK_AFTER_FAILURES && !this.blockedDevices.has(id)) {
             this.blockedDevices.add(id);
-            this.log.warn(`Device ${id} is now blocked until adapter restart!`);
+            const message = `Device ${id} is now blocked until adapter restart!`;
+            if (quiet) {
+                this.log.debug(message);
+            } else {
+                this.log.warn(message);
+            }
         }
     }
 
@@ -484,6 +544,7 @@ class WirelessMbus extends utils.Adapter {
         }
 
         this.createdDevices.add(deviceId);
+        this.knownDevices.add(deviceId);
     }
 
     async updateDeviceStates(deviceId, data) {

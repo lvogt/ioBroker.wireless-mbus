@@ -226,6 +226,7 @@
     "alwaysUpdate": true,
     "forcekWh": false,
     "autoBlocklist": true,
+    "ignoreUnknownDevices": false,
     "aeskeys": [],
     "blacklist": []
   },

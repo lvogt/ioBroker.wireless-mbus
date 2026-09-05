@@ -114,6 +114,16 @@
                     "md": 6,
                     "lg": 4,
                     "xl": 4
+                },
+                "ignoreUnknownDevices": {
+                    "type": "checkbox",
+                    "label": "Only handle devices that already have an object tree",
+                    "help": "ignoreUnknownDevicesHelp",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 4,
+                    "xl": 4
                 }
             }
         },
@@ -130,11 +140,23 @@
                     "lg": 12,
                     "xl": 12
                 },
+                "keysIgnoredInfo": {
+                    "type": "staticText",
+                    "text": "keysIgnoredHint",
+                    "hidden": "!data.ignoreUnknownDevices",
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
                 "importNeedsKey": {
                     "type": "sendTo",
                     "label": "Check for new devices that need a key",
                     "command": "importNeedsKey",
                     "jsonData": "{\"aeskeys\": ${JSON.stringify(data.aeskeys || [])}}",
+                    "disabled": "!!data.ignoreUnknownDevices",
                     "useNative": true,
                     "result": {
                         "devicesAdded": "importNeedsKeyAdded",
