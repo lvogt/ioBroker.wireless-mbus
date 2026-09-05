@@ -92,6 +92,18 @@ they are, but four things change:
 The option "Cache for compact frames support" is gone as well: compact telegrams are always
 supported now, and the first one of a meter no longer counts towards the automatic block list.
 
+### Techem and Diehl (PRIOS) meters
+
+Version 0.12.0 got these two wrong: a Techem heat cost allocator reported nonsense under names like
+`VIF_RETURN_TEMP`, a Techem heat meter could not be read at all and ended up on the automatic block
+list, and a PRIOS water meter reported its volume as a heat cost unit. 0.12.1 reads them correctly
+again - the states 0.12.0 created for them stay behind and can be deleted, the right ones are
+written with the next telegram.
+
+Two of their states are named differently than in 0.11.x, because the values of the previous period
+now carry the storage number they belong to (`1-1-…` rather than `1-0-…`), and the remaining
+battery life of a PRIOS meter is reported in months rather than in years.
+
 ## ToDo
 
 * sending telegrams for S mode receivers?
@@ -104,6 +116,8 @@ supported now, and the first one of a meter no longer counts towards the automat
 -->
 ### **WORK IN PROGRESS**
 * (ChL) Fix the adapter stopping instead of blocking a device whose telegrams keep failing to decode
+* (ChL) Fix Techem and Diehl (PRIOS) meters, which 0.12.0 decoded wrongly or not at all - the states it wrote for them carry wrong names and values and can be deleted
+* (ChL) A 64 bit measured value with a scaling factor is a number now, like every other measured value
 
 ### 0.12.0 (2026-09-03)
 * (ChL) Replace the built-in telegram parser with the wireless-mbus-parser library

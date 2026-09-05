@@ -179,6 +179,99 @@ describe('Parser contract: state ids and values', () => {
     });
 });
 
+describe('Parser contract: manufacturer specific telegrams', () => {
+    /*
+     * Techem and Diehl (PRIOS) telegrams are decoded by the library rather
+     * than by the wM-Bus rules, and 0.12.0 shipped a version that skipped
+     * their first data record: every value of a Techem heat cost allocator
+     * ended up under the wrong name, a Techem heat meter threw a RangeError,
+     * and a PRIOS water meter reported its volume as a heat cost unit. None of
+     * it was noticed because nothing here covered them.
+     */
+    let parser;
+    beforeEach(() => {
+        parser = new WirelessMbusParser();
+    });
+
+    it('Techem heat cost allocator', async () => {
+        const result = await parse(
+            parser,
+            '33446850942905119480a20f9f257500902d0000018e0a760a000000000000000000000000000000000000000000000000000000',
+        );
+
+        expect(result.deviceInformation.Manufacturer).to.equal('TCH');
+        expect(result.deviceInformation.Id).to.equal('11052994');
+        expect(result.dataRecord.map(stateId)).to.eql([
+            '1-1-VIF_TIME_POINT_DATE',
+            '2-1-VIF_HCA',
+            '3-0-VIF_TIME_POINT_DATE',
+            '4-0-VIF_HCA',
+            '5-0-VIF_EXTERNAL_TEMP',
+            '6-0-VIF_EXTERNAL_TEMP',
+            '7-0-VIF_TEMP_DIFF',
+        ]);
+        expect(result.dataRecord[1].value).to.equal(117);
+        expect(Number(result.dataRecord[4].value)).to.be.closeTo(27.02, 0.01);
+        expect(result.dataRecord[4].unit).to.equal('°C');
+    });
+
+    it('Techem heat meter', async () => {
+        const result = await parse(
+            parser,
+            '36446850626262624543A1009F2777010060780000000A000000000000000000000000000000000000000000000000A0400000B4010000',
+        );
+
+        expect(result.deviceInformation.Manufacturer).to.equal('TCH');
+        expect(result.deviceInformation.Id).to.equal('62626262');
+        expect(result.dataRecord.map(stateId)).to.eql([
+            '1-1-VIF_TIME_POINT_DATE',
+            '2-1-VIF_ENERGY_WATT',
+            '3-0-VIF_TIME_POINT_DATE',
+            '4-0-VIF_ENERGY_WATT',
+            '5-0-VIF_ENERGY_WATT',
+        ]);
+        expect(result.dataRecord[4].value).to.equal(495000);
+        expect(result.dataRecord[4].unit).to.equal('Wh');
+    });
+
+    it('Techem heat meter with a current period energy above 16 bit', async () => {
+        const result = await parse(
+            parser,
+            '36446850626262624543A1009F2777010060780001000A000000000000000000000000000000000000000000000000A0400000B4010000',
+        );
+
+        // it used to be truncated to the lower 16 bit
+        expect(result.dataRecord[3].value).to.equal(65656000);
+    });
+
+    it('PRIOS water meter', async () => {
+        const result = await parse(parser, '1944a511780727324120a2211a00136d7417074c0dcb9661a3ab');
+
+        expect(result.deviceInformation.Manufacturer).to.equal('DME');
+        expect(result.deviceInformation.Id).to.equal('20413227');
+        expect(result.dataRecord.map(stateId)).to.eql([
+            '1-0-VIF_VOLUME',
+            '2-1-VIF_VOLUME',
+            '3-1-VIF_TIME_POINT_DATE',
+            '4-0-VIF_BATTERY_REMAINING',
+            '5-0-VIF_TRANSMIT_PERIOD',
+            '6-0-VIF_ERROR_FLAGS',
+            '7-0-VIF_ERROR_FLAGS',
+        ]);
+        expect(Number(result.dataRecord[0].value)).to.be.closeTo(175.854, 0.001);
+        expect(result.dataRecord[0].unit).to.equal('m³');
+    });
+
+    it('a PRIOS device is known under two ids', () => {
+        // The link layer address is not the id the application layer reports,
+        // and the adapter looks up keys and the block list by the first while
+        // it names the device in the object tree by the second
+        expect(guessDeviceId(Buffer.from('1944a511780727324120a2211a00136d7417074c0dcb9661a3ab', 'hex'))).to.equal(
+            'DME-32270778',
+        );
+    });
+});
+
 describe('Parser contract: compact frames', () => {
     // A compact frame carries only a header signature; the record layout comes
     // from a previously seen full frame. The adapter therefore keeps one
