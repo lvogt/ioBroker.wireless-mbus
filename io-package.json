@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "wireless-mbus",
-    "version": "0.12.0",
+    "version": "0.12.1",
     "news": {
+      "0.12.1": {
+        "en": "Fix Techem and Diehl (PRIOS) meters, which 0.12.0 decoded wrongly or not at all - the states it wrote for them carry wrong names and values and can be deleted\nFix the adapter stopping instead of blocking a device whose telegrams keep failing to decode\nA 64 bit measured value with a scaling factor is a number now, like every other measured value",
+        "de": "Fix für TECHEM & DIEHL (PRIOS) Zähler, die 0.12.0 falsch oder gar nicht dekodierte — die States haben falsche Namen und Werte und können gelöscht werden",
+        "ru": "Исправьте счетчики Techem и Diehl (PRIOS), которые в версии 0.12.0 декодировали неправильно или вообще нет — написанные для них состояния содержат неправильные имена и значения и могут быть удалены\nИсправьте остановку адаптера, а не блокировку устройства, телеграммы которого по-прежнему не могут декодироваться\n64-битное измеренное значение с коэффициентом масштабирования теперь является числом, как и любое другое измеренное значение",
+        "pt": "Corrige os medidores Techem e Diehl (PRIOS), que o 0.12.0 decodificou errado ou não - os estados escritos têm nomes e valores errados e podem ser excluídos\nCorrija a parada do adaptador em vez de bloquear um telegrama que não decodifica\nUm valor medido de 64 bits com fator de escala agora é um número, como todo valor medido",
+        "nl": "Techem- en Diehl-meters (PRIOS) repareren, die in 0.12.0 verkeerd of helemaal niet zijn gedecodeerd. De staten die voor hen zijn geschreven bevatten verkeerde namen en waarden en kunnen worden verwijderd\nHerstel dat de adapter stopt in plaats van een apparaat te blokkeren waarvan de telegrammen steeds niet kunnen worden gedecodeerd\nEen 64-bits meetwaarde met een schaalfactor is nu een getal, net als elke andere meetwaarde",
+        "fr": "Réparez les compteurs Techem and Diehl (PRIOS), mal décodés en 0.12.0 ou pas du tout. Les états qu'il a écrits portent des noms et des valeurs erronés et peuvent être supprimés\nRéparer l'adaptateur au lieu de bloquer un appareil dont les télégrammes ne sont pas décodés\nUne valeur de 64 bits avec facteur d'échelle est désormais un chiffre, comme toute autre",
+        "it": "Correggi i contatori Techem e Diehl (PRIOS), decodificati male o per niente: gli stati scritti hanno nomi e valori errati e possono essere eliminati\nRisolve l'arresto dell'adattatore anziché un dispositivo i cui telegrammi non si decodificano\nUn valore misurato a 64 bit con fattore di scala ora è un numero, come ogni altro",
+        "es": "Fijar los contadores Techem y Diehl (PRIOS), que 0.12.0 decodificó mal o no los decodificó: los estados que escribió tienen nombres y valores incorrectos y se pueden borrar\nArreglar que el adaptador se detenga en lugar de bloquear un dispositivo cuyos telegramas no se decodifican\nUn valor medido de 64 bits con factor de escala ahora es un número, como cualquier otro valor medido",
+        "pl": "Napraw mierniki Techem i Diehl (PRIOS), które 0.12.0 zdekodowano błędnie lub wcale - stany, które dla nich napisał, niosą złe nazwy i wartości i można je usunąć\nNapraw zatrzymanie adaptera zamiast blokować urządzenie, którego telegramy ciągle się nie dekodują\n64 bitowa wartość mierzona ze współczynnikiem skalowania jest teraz liczbą, jak każda inna zmierzona wartość",
+        "uk": "Виправте лічильники Techem і Diehl (PRIOS), які 0.12.0 розшифрували неправильно або зовсім не розшифрували - стани, які він написав для них, мають неправильні назви та значення і можуть бути видалені\nВиправте зупинку адаптера замість блокування пристрою, телеграми якого постійно не розшифровуються\nВимірюване значення 64 біт із коефіцієнтом масштабування тепер є числом, як і будь-яке інше вимірюване значення",
+        "zh-cn": "修复 Techem 和 Diehl (PRIOS) 仪表，0.12.0 解码错误或根本没有解码——它为它们写的状态带有错误的名称和值，可以删除\n修复适配器停止运行而不是屏蔽电报一直无法解码的设备的问题\n与所有其他测量值一样，带有缩放系数的 64 位测量值现在是一个数字"
+      },
       "0.12.0": {
         "en": "Replace the built-in telegram parser with the wireless-mbus-parser library\nNew admin configuration UI (JSON config); a serial port can now simply be typed in, the separate \"custom port\" field is gone\nFix shutdown of the adapter: a serial connection over TCP was not closed properly and could reconnect itself while the adapter was stopping\nMeasured values are now stored as numbers instead of preformatted strings - a history adapter that stored them as text starts a new series\nFix decoding of the tariff and device unit of a data record\nCompact telegrams are now supported without a separate option; the option \"Cache for compact frames support\" was removed\nFollow further ioBroker repository recommendations: move the test code below `test/`, use the short `admin/i18n/<lang>.json` layout and clean up the keywords\nRun the adapter tests only after linting and type checking succeeded\nUse the adapter's own timer functions, so pending timers are cleared when the adapter is unloaded\nFix receivers getting stuck after disturbed reception: a damaged telegram no longer takes the following ones with it, and no longer leaves the adapter yellow until it is restarted by hand (#308, #309)\nThe adapter reconnects to the receiver instead of staying idle or stopping when the connection fails\nFix telegrams getting lost when several meters transmit at once, and damaged data being reported as readings of devices that do not exist\nDeclare the state that holds the raw data of an unreadable telegram as text rather than as a numeric value",
         "de": "Ersetzen Sie den eingebauten Telegram-Parser durch die Wireless-MBUS-Parser\nNeue Admin-UI (JSON-Konfiguration); ein serieller Port ist nun einfach einzugeben, das Feld „Custom Port“ ist weg\nAbschalten des Adapters beheben: Eine serielle TCP-Verbindung wurde nicht richtig geschlossen und konnte sich neu verbinden\nMesswerte werden jetzt als Zahlen statt als vorformatierte Strings gespeichert — ein Historienadapter als Text beginnt eine neue Reihe\nTarif und Geräteeinheit eines Datensatzes korrigieren\nKompakte Telegramme werden jetzt ohne separate Option unterstützt; die Option „Cache für Compact Frames“ wurde entfernt\n<lang>Folgen Sie den Empfehlungen des ioBroker-Repositorys: Testcode unter `test/“, verwenden Sie das kurze `admin/i18n/ .json`-Layout und bereinigen Sie die Keywords\nAdaptertests erst nach erfolgreicher Linting- und Typprüfung\nVerwenden Sie die Timerfunktionen des Adapters, damit ausstehende Timer gelöscht werden\nFixieren von Empfängern nach Empfangsstörungen: Ein defektes Telegramm nimmt die folgenden nicht mehr mit und lässt den Adapter gelb, bis er von Hand neu gestartet wird (#308, #309)\nDer Adapter verbindet sich wieder mit dem Receiver, statt inaktiv zu sein oder bei Ausfall zu stoppen\nKorrigiert, dass Telegramme verloren gehen, wenn mehrere Zähler gleichzeitig senden und beschädigte Daten als Werte nicht vorhandener Geräte melden\nDeklarieren Sie den Staat mit den Rohdaten eines unlesbaren Telegramms als Text und nicht als Zahl",
@@ -80,19 +93,6 @@
         "pl": "Zależności aktualizacji; kilka poprawek wyciszających bota sprawdzającego adapter",
         "uk": "Оновити залежності; деякі виправлення, щоб заглушити роботу бота перевірки адаптера",
         "zh-cn": "升级依赖；一些修复以安静适配器检查机器人"
-      },
-      "0.9.3": {
-        "en": "Fix handling of frame type B without CRC and of 64bit integer DIFs",
-        "de": "Korrektur bei der Behandlung von Typ B Telegrammen ohne CRC und bei 64bit Integer DIFs",
-        "ru": "Исправлена ​​обработка кадров типа B без CRC и 64-битных целочисленных DIF.",
-        "pt": "Corrigido o tratamento de quadro tipo B sem CRC e de DIFs inteiros de 64 bits",
-        "nl": "Probleem opgelost met de afhandeling van frametype B zonder CRC en van 64bit integer DIF's",
-        "fr": "Correction de la gestion des trames de type B sans CRC et des DIF entiers 64 bits",
-        "it": "Corretta la gestione del frame di tipo B senza CRC e dei DIF interi a 64 bit",
-        "es": "Se corrigió el manejo de trama tipo B sin CRC y de DIF enteros de 64 bits.",
-        "pl": "Naprawiono obsługę ramki typu B bez CRC i 64-bitowych liczb całkowitych DIF",
-        "uk": "Виправлено обробку кадру типу B без CRC і 64-бітних цілих DIF",
-        "zh-cn": "修复了不带 CRC 的帧类型 B 和 64 位整数 DIF 的处理"
       }
     },
     "messages": [

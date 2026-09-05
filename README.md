@@ -114,7 +114,7 @@ battery life of a PRIOS meter is reported in months rather than in years.
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.12.1 (2026-09-05)
 * (ChL) Fix Techem and Diehl (PRIOS) meters, which 0.12.0 decoded wrongly or not at all - the states it wrote for them carry wrong names and values and can be deleted
 * (ChL) Fix the adapter stopping instead of blocking a device whose telegrams keep failing to decode
 * (ChL) A 64 bit measured value with a scaling factor is a number now, like every other measured value
@@ -145,9 +145,6 @@ battery life of a PRIOS meter is reported in months rather than in years.
 
 ### 0.10.1
 * (ChL) Fix SLIP encoder used by IMST iU891A-XL
-
-### 0.10.0
-* (ChL) Add support for IMST iU891A-XL receiver
 
 [Older changelogs can be found there](CHANGELOG_OLD.md)
 
