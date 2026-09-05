@@ -36,14 +36,23 @@ function createReceiver(ReceiverClass, mode) {
     /** @type {string[]} */
     const errors = [];
     /** @type {string[]} */
+    const warns = [];
+    /** @type {string[]} */
     const infos = [];
+    /** @type {string[]} */
+    const debugs = [];
 
     const receiver = new ReceiverClass(
         { path: '/dev/mockPort', serialPortImpl: function () {} },
         mode,
         message => messages.push(message),
         () => {},
-        { info: message => infos.push(message), error: message => errors.push(message), debug: () => {} },
+        {
+            info: message => infos.push(message),
+            warn: message => warns.push(message),
+            error: message => errors.push(message),
+            debug: message => debugs.push(message),
+        },
     );
 
     return {
@@ -51,7 +60,13 @@ function createReceiver(ReceiverClass, mode) {
         messages,
         responses,
         errors,
+        warns,
         infos,
+        /**
+         * Whether any line of the debug log says this - which is where the
+         * trace of a dropped message lives.
+         */
+        debugged: text => debugs.some(message => message.includes(text)),
         /** Pretend a command was sent and is waiting for its response. */
         expectResponse: () => receiver.readPromises.push(data => responses.push(data)),
         receive: (...chunks) =>
@@ -317,7 +332,7 @@ describe('CUL framing', () => {
         cul.receive(`V 1.30 CUL868\r\n`);
 
         expect(cul.messages).to.be.empty;
-        expect(cul.infos, 'dropping a line should leave a trace').to.have.lengthOf(1);
+        expect(cul.debugged('Nothing is waiting for this message'), 'dropping a line should leave a trace').to.be.true;
     });
 
     it('discards a telegram line that is not valid hex', () => {
@@ -386,6 +401,7 @@ describe('TCP framing', () => {
             error => errors.push(`${error}`),
             {
                 info: () => {},
+                warn: () => {},
                 error: () => {},
                 debug: () => {},
             },
@@ -412,7 +428,10 @@ describe('TCP framing', () => {
         expect(() => tcp.receive('{"frameType":"A","containsCrc"')).to.not.throw();
 
         expect(tcp.messages).to.be.empty;
-        expect(tcp.errors).to.have.lengthOf(1);
+        // A telegram nobody can read is the sender's problem, not a failure of
+        // the adapter - so it is a warning
+        expect(tcp.errors).to.be.empty;
+        expect(tcp.warns).to.have.lengthOf(1);
     });
 });
 
@@ -432,7 +451,8 @@ describe('Message dispatch', () => {
 
         expect(amber.messages).to.be.empty;
         expect(amber.errors).to.be.empty;
-        expect(amber.infos, 'dropping a message should leave a trace').to.have.lengthOf(1);
+        expect(amber.debugged('Nothing is waiting for this message'), 'dropping a message should leave a trace').to.be
+            .true;
     });
 
     it('takes anything for a telegram where the protocol cannot tell', () => {

@@ -73,6 +73,9 @@ class WirelessMbus extends utils.Adapter {
         this.blockedDevices = new Set();
         // Devices that asked for a key the configuration does not have
         this.needsKey = new Set();
+        // Devices whose configured key was reported as unusable - once is
+        // enough, the telegrams keep coming
+        this.reportedInvalidKeys = new Set();
 
         // Devices whose objects have been created or verified in this run
         this.createdDevices = new Set();
@@ -245,6 +248,7 @@ class WirelessMbus extends utils.Adapter {
                 {
                     debug: this.log.debug,
                     info: this.log.info,
+                    warn: this.log.warn,
                     error: this.log.error,
                 },
             );
@@ -380,7 +384,7 @@ class WirelessMbus extends utils.Adapter {
 
         if (data.rawData.length < 11) {
             if (id == 'ERR-XXXXXXXX') {
-                this.log.info(`Invalid telegram received? ${data.rawData.toString('hex')}`);
+                this.log.debug(`Invalid telegram received? ${data.rawData.toString('hex')}`);
             } else {
                 this.log.debug(`Beacon of device: ${id}`);
             }
@@ -503,7 +507,11 @@ class WirelessMbus extends utils.Adapter {
             return Buffer.from(key, 'latin1');
         }
 
-        this.log.error(`Invalid AES key configured for device ${id} - key rejected!`);
+        if (!this.reportedInvalidKeys.has(id)) {
+            this.reportedInvalidKeys.add(id);
+            this.log.error(`Invalid AES key configured for device ${id} - key rejected!`);
+        }
+
         return undefined;
     }
 

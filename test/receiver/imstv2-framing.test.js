@@ -16,7 +16,7 @@ const ImstV2Receiver = require('../../lib/receiver/ImstV2Receiver');
  * restarted the adapter by hand.
  */
 
-const emptyLogger = { info: () => {}, error: () => {}, debug: () => {} };
+const emptyLogger = { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} };
 
 const telegram = '2C446532821851582C067AE1000000046D1906D9180C1334120000426CBF1C4C1300000000326CFFFF01FD7300';
 
