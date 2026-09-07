@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "wireless-mbus",
-    "version": "0.12.2",
+    "version": "0.12.3",
     "news": {
+      "0.12.3": {
+        "en": "Fix the CUL initialisation on the receivers that lose the first byte written after the line has been idle (#312)",
+        "de": "Fix für die CUL-Initialisierung auf Empfängern, die das erste Byte nach Inaktivität verlieren (#312)",
+        "ru": "Исправьте инициализацию CUL на приемниках, в которых теряется первый байт, записанный после простоя строки: теперь каждая команда отправляется с разделителем, который вместо командной буквы теряется, а при настройке режима ожидает подтверждения, а не сбоя в пересеченной строке (#312)",
+        "pt": "Corrija a inicialização CUL nos receptores que perdem o primeiro byte escrito após a linha ficar ociosa: cada comando agora é enviado com um separador na frente, que é o que se perde em vez da letra do comando, e definir o modo espera sua confirmação em vez de falhar na linha que o cruzou (#312)",
+        "nl": "Corrigeer de CUL-initialisatie op de ontvangers die de eerste byte verliezen die is geschreven nadat de regel niet is gebruikt: elk commando wordt nu verzonden met een scheidingsteken ervoor, wat verloren gaat in plaats van de opdrachtletter, en als u de modus instelt, wacht u op de bevestiging in plaats van op een mislukking op een lijn die de code overschrijdt (#312)",
+        "fr": "Corrigez l'initialisation du CUL sur les récepteurs qui perdent le premier octet écrit alors que la ligne est inactive : chaque commande est désormais envoyée avec un séparateur devant elle, et le réglage du mode attend sa confirmation au lieu d'échouer sur une ligne qui la franchit (#312)",
+        "it": "Corregge l'inizializzazione del CUL sui ricevitori che perdono il primo byte scritto dopo che la riga è inattiva: ogni comando viene ora inviato con un separatore davanti, che è ciò che va perso al posto della lettera di comando, e l'impostazione attende la conferma anziché fallire (#312)",
+        "es": "Corregir la inicialización de la CUL en los receptores que pierden el primer byte escrito después de que la línea esté inactiva: ahora todos los comandos se envían con un separador delante, que es lo que se pierde en lugar de la letra de comando, y configurar el modo espera su confirmación en lugar de fallar en la línea que la cruzó (#312)",
+        "pl": "Napraw inicjalizację CUL na odbiornikach, które tracą pierwszy bajt zapisany po bezczynności wiersza: każde polecenie jest teraz wysyłane z separatorem przed nim, który jest gubiony zamiast litery polecenia, a ustawienie trybu czeka na jego potwierdzenie, a nie zawodzi na linii, która go przekroczyła (#312)",
+        "uk": "Виправлено ініціалізацію CUL на приймачах, які втрачають перший байт, записаний після простою рядка: кожна команда тепер надсилається з роздільником перед нею, який втрачається замість літери команди, і налаштування режиму очікує його підтвердження, а не відмови на рядку, що перетнула його (#312)",
+        "zh-cn": "修复接收器上的 CUL 初始化问题，这些初始化会丢失该行空闲后写入的第一个字节：现在发送的每条命令前面都有一个分隔符，这是丢失的而不是命令字母，并且设置模式会等待其确认，而不是在交叉的行上失败 (#312)"
+      },
       "0.12.2": {
         "en": "Add an option to only handle devices that already have an object tree, so that no new devices are created and no telegram of a device without one is reported\nRemember the record layout of a device, so that its compact telegrams are decoded right after a restart of the adapter\nUpdate wireless-mbus-parser to 1.3.1, which fixes the date of the current reading of a Techem meter - it used to be stamped with the year it was decoded in rather than with the year of the meter\nReport at the log level the message deserves: a receiver that stays away no longer writes an error with every attempt, what the hardware says about itself is a warning, and RSSI is debug",
         "de": "Neue Option, nur Geräte zu behandeln, die bereits einen Objektbaum haben\nStruktur von Kompakt Telegrammen wird gespeichert und können damit direkt nach Adapter (Neu)Start dekodiert werden\nwireless-mbus-parser 1.3.1 korrigiert in manchen Fllen das Datum der aktuellen Ablesung eines Techem-Zählers\nMeldungen erscheinen im passenden Log-Level",
@@ -80,19 +93,6 @@
         "pl": "Fix Slip Encoder używany przez IMST IU891A-XL",
         "uk": "Виправити кодер ковзання, який використовується IMST IU891A-XL",
         "zh-cn": "修复IMST IU891A-XL使用的固定滑动编码器"
-      },
-      "0.10.0": {
-        "en": "Add support for  IMST iU891A-XL receiver",
-        "de": "Unterstützung für den IMST iU891A-XL Empfänger",
-        "ru": "Добавлена ​​поддержка приемника IMST iU891A-XL.",
-        "pt": "Adicionar suporte para receptor IMST iU891A-XL",
-        "nl": "Ondersteuning toegevoegd voor IMST iU891A-XL-ontvanger",
-        "fr": "Ajout de la prise en charge du récepteur IMST iU891A-XL",
-        "it": "Aggiunto il supporto per il ricevitore IMST iU891A-XL",
-        "es": "Agregue soporte para el receptor IMST iU891A-XL",
-        "pl": "Dodaj obsługę odbiornika IMST iU891A-XL",
-        "uk": "Додайте підтримку приймача IMST iU891A-XL",
-        "zh-cn": "添加对 IMST iU891A-XL 接收器的支持"
       }
     },
     "messages": [

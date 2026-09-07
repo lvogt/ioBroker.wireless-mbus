@@ -1,4 +1,7 @@
 # Older changes
+## 0.10.2
+* (ChL) Improve robustness of IMST iU891A-XL communication
+
 ## 0.10.1
 * (ChL) Fix SLIP encoder used by IMST iU891A-XL
 

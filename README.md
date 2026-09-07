@@ -115,7 +115,7 @@ battery life of a PRIOS meter is reported in months rather than in years.
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.12.3 (2026-09-07)
 * (ChL) Fix the CUL initialisation on the receivers that lose the first byte written after the line has been idle: every command is now sent with a separator in front of it, which is what gets lost instead of the command letter, and setting the mode waits for its confirmation rather than failing on a line that crossed it (#312)
 
 ### 0.12.2 (2026-09-05)
@@ -149,9 +149,6 @@ battery life of a PRIOS meter is reported in months rather than in years.
 * (ChL) Switch to @iobroker/eslint-config (ESLint 9 + Prettier)
 * (ChL) Add release-script based release management
 * (ChL) Include the admin translations in the published package
-
-### 0.10.2
-* (ChL) Improve robustness of IMST iU891A-XL communication
 
 [Older changelogs can be found there](CHANGELOG_OLD.md)
 
