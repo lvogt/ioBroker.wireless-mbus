@@ -107,16 +107,43 @@
         "level": "warn",
         "title": {
           "en": "New telegram parser",
-          "de": "Neuer Telegramm-Parser"
+          "de": "Neuer Telegramm-Parser",
+          "ru": "Новый парсер телеграмм",
+          "pt": "Novo analisador de telegramas",
+          "nl": "Nieuwe telegramparser",
+          "fr": "Nouvel analyseur de télégramme",
+          "it": "Nuovo analizzatore di telegrammi",
+          "es": "Nuevo analizador de telegramas",
+          "pl": "Nowy parser telegramów",
+          "uk": "Новий аналізатор телеграм",
+          "zh-cn": "新的电报解析器"
         },
         "text": {
           "en": "Measured values are now numbers instead of formatted text. A history adapter that has stored them as text will not accept them - InfluxDB in particular - and scripts that compare strings stop matching. A few states of unusual meters change their name. Please read the update notes first.",
-          "de": "Messwerte sind jetzt Zahlen statt formatierter Text. Ein History-Adapter, der sie als Text gespeichert hat, nimmt sie nicht mehr an - vor allem InfluxDB - und Skripte, die Zeichenketten vergleichen, greifen nicht mehr. Einige Datenpunkte ungewöhnlicher Zähler ändern ihren Namen. Bitte vorher die Update-Hinweise lesen."
+          "de": "Messwerte sind jetzt Zahlen statt formatierter Text. Ein History-Adapter, der sie als Text gespeichert hat, nimmt sie nicht mehr an - vor allem InfluxDB - und Skripte, die Zeichenketten vergleichen, greifen nicht mehr. Einige Datenpunkte ungewöhnlicher Zähler ändern ihren Namen. Bitte vorher die Update-Hinweise lesen.",
+          "ru": "Измеренные значения теперь представляют собой числа, а не форматированный текст. Адаптер истории, который сохранил их в виде текста, не примет их — в частности, InfluxDB — и скрипты, сравнивающие строки, перестают соответствовать. Несколько штатов необычных метров меняют свое название. Пожалуйста, сначала прочитайте примечания к обновлению.",
+          "pt": "Os valores medidos agora são números em vez de texto formatado. Um adaptador de histórico que os armazenou como texto não os aceitará - InfluxDB em particular - e os scripts que comparam strings param de corresponder. Alguns estados de medidores incomuns mudam de nome. Por favor, leia as notas de atualização primeiro.",
+          "nl": "Gemeten waarden zijn nu getallen in plaats van opgemaakte tekst. Een geschiedenisadapter die ze als tekst heeft opgeslagen, accepteert ze niet (met name InfluxDB) en scripts die tekenreeksen vergelijken, komen niet meer overeen. Een paar staten van ongebruikelijke meters veranderen hun naam. Lees eerst de update-opmerkingen.",
+          "fr": "Les valeurs mesurées sont désormais des nombres au lieu de texte formaté. Un adaptateur d'historique qui les a stockés sous forme de texte ne les acceptera pas - InfluxDB en particulier - et les scripts qui comparent les chaînes cessent de correspondre. Quelques états de mètres inhabituels changent de nom. Veuillez d'abord lire les notes de mise à jour.",
+          "it": "I valori misurati ora sono numeri anziché testo formattato. Un adattatore cronologico che li ha archiviati come testo non li accetterà, in particolare InfluxDB, e gli script che confrontano le stringhe smettono di corrispondere. Alcuni stati di metri insoliti cambiano nome. Si prega di leggere prima le note di aggiornamento.",
+          "es": "Los valores medidos ahora son números en lugar de texto formateado. Un adaptador de historial que los haya almacenado como texto no los aceptará (InfluxDB en particular) y los scripts que comparan cadenas dejan de coincidir. Algunos estados de contadores inusuales cambian de nombre. Lea primero las notas de actualización.",
+          "pl": "Zmierzone wartości są teraz liczbami, a nie sformatowanym tekstem. Adapter historii, który zapisał je jako tekst, nie zaakceptuje ich - w szczególności InfluxDB - i skrypty porównujące ciągi przestaną dopasowywać. Kilka stanów nietypowych liczników zmienia nazwę. Najpierw przeczytaj uwagi dotyczące aktualizacji.",
+          "uk": "Виміряні значення тепер є числами, а не форматованим текстом. Адаптер історії, який зберіг їх як текст, не сприйме їх - зокрема InfluxDB - і сценарії, які порівнюють рядки, перестають відповідати. Кілька штатів незвичайних лічильників змінюють назву. Спочатку прочитайте примітки до оновлення.",
+          "zh-cn": "测量值现在是数字而不是格式化文本。将它们存储为文本的历史适配器将不会接受它们 - 特别是 InfluxDB - 并且比较字符串的脚本将停止匹配。一些不寻常的米州改变了他们的名字。请先阅读更新说明。"
         },
         "link": "https://github.com/lvogt/ioBroker.wireless-mbus#updating-from-011x",
         "linkText": {
           "en": "Update notes",
-          "de": "Update-Hinweise"
+          "de": "Update-Hinweise",
+          "ru": "Обновить заметки",
+          "pt": "Atualizar notas",
+          "nl": "Opmerkingen bijwerken",
+          "fr": "Notes de mise à jour",
+          "it": "Note di aggiornamento",
+          "es": "Notas de actualización",
+          "pl": "Aktualizuj notatki",
+          "uk": "Оновити нотатки",
+          "zh-cn": "更新笔记"
         },
         "buttons": [
           "agree",
@@ -134,16 +161,43 @@
         "level": "warn",
         "title": {
           "en": "Techem and Diehl (PRIOS) meters",
-          "de": "Techem- und Diehl-Zähler (PRIOS)"
+          "de": "Techem- und Diehl-Zähler (PRIOS)",
+          "ru": "Счетчики Techem и Diehl (PRIOS)",
+          "pt": "Medidores Techem e Diehl (PRIOS)",
+          "nl": "Techem en Diehl (PRIOS) meters",
+          "fr": "Compteurs Techem et Diehl (PRIOS)",
+          "it": "Metri Techem e Diehl (PRIOS).",
+          "es": "Medidores Techem y Diehl (PRIOS)",
+          "pl": "Mierniki Techem i Diehl (PRIOS).",
+          "uk": "Лічильники Techem і Diehl (PRIOS).",
+          "zh-cn": "Techem 和 Diehl (PRIOS) 仪表"
         },
         "text": {
           "en": "Version 0.12.0 decoded these two wrongly: a Techem heat cost allocator reported nonsense, a Techem heat meter could not be read at all and ended up on the automatic block list, and a Diehl water meter reported its volume under the wrong name. This version reads them correctly again. The states 0.12.0 wrote for such a meter keep their wrong names and values and can be deleted - the right ones are written with the next telegram.",
-          "de": "Version 0.12.0 hat diese beiden falsch dekodiert: Ein Techem-Heizkostenverteiler lieferte Unsinn, ein Techem-Wärmezähler ließ sich gar nicht lesen und landete auf der automatischen Blockliste, und ein Diehl-Wasserzähler meldete sein Volumen unter dem falschen Namen. Diese Version liest sie wieder korrekt. Die Datenpunkte, die 0.12.0 für solche Zähler angelegt hat, behalten ihre falschen Namen und Werte und können gelöscht werden - die richtigen werden mit dem nächsten Telegramm geschrieben."
+          "de": "Version 0.12.0 hat diese beiden falsch dekodiert: Ein Techem-Heizkostenverteiler lieferte Unsinn, ein Techem-Wärmezähler ließ sich gar nicht lesen und landete auf der automatischen Blockliste, und ein Diehl-Wasserzähler meldete sein Volumen unter dem falschen Namen. Diese Version liest sie wieder korrekt. Die Datenpunkte, die 0.12.0 für solche Zähler angelegt hat, behalten ihre falschen Namen und Werte und können gelöscht werden - die richtigen werden mit dem nächsten Telegramm geschrieben.",
+          "ru": "Версия 0.12.0 неправильно расшифровала эти два значения: распределитель стоимости тепла Techem сообщал о ерунде, счетчик тепла Techem вообще не считывался и попадал в автоматический черный список, а счетчик воды Diehl сообщал о своем объеме под неверным именем. Эта версия снова читает их правильно. Состояния, написанные 0.12.0 для такого счетчика, сохраняют свои неправильные имена и значения и могут быть удалены - правильные пишутся со следующей телеграммой.",
+          "pt": "A versão 0.12.0 decodificou esses dois erroneamente: um alocador de custos de aquecimento Techem relatou um absurdo, um medidor de calor Techem não pôde ser lido e acabou na lista de bloqueio automático, e um medidor de água Diehl relatou seu volume com o nome errado. Esta versão os lê corretamente novamente. Os estados 0.12.0 escritos para tal medidor mantêm seus nomes e valores errados e podem ser excluídos - os estados corretos são escritos no próximo telegrama.",
+          "nl": "Versie 0.12.0 decodeerde deze twee verkeerd: een Techem warmtekostenallocator rapporteerde onzin, een Techem warmtemeter kon helemaal niet worden uitgelezen en kwam op de automatische blokkeerlijst terecht, en een Diehl watermeter rapporteerde zijn volume onder de verkeerde naam. Deze versie leest ze opnieuw correct. De toestanden die 0.12.0 voor zo'n meter schreef, behouden hun verkeerde namen en waarden en kunnen worden verwijderd - de juiste worden bij het volgende telegram geschreven.",
+          "fr": "La version 0.12.0 a mal décodé ces deux éléments : un répartiteur de frais de chauffage Techem a signalé des absurdités, un compteur de chaleur Techem n'a pas pu être lu du tout et s'est retrouvé sur la liste de blocage automatique, et un compteur d'eau Diehl a signalé son volume sous un mauvais nom. Cette version les lit à nouveau correctement. Les états écrits par 0.12.0 pour un tel compteur conservent leurs mauvais noms et valeurs et peuvent être supprimés - les bons sont écrits avec le prochain télégramme.",
+          "it": "La versione 0.12.0 li ha decodificati erroneamente: un ripartitore dei costi di riscaldamento Techem ha segnalato un errore, un contatore di calore Techem non è stato letto affatto ed è finito nella lista di blocco automatica e un contatore dell'acqua Diehl ha segnalato il suo volume con il nome sbagliato. Questa versione li legge di nuovo correttamente. Gli stati 0.12.0 scritti per un contatore di questo tipo mantengono i nomi e i valori errati e possono essere cancellati, quelli corretti vengono scritti con il telegramma successivo.",
+          "es": "La versión 0.12.0 decodificó estos dos incorrectamente: un asignador de costos de calefacción de Techem informó tonterías, un medidor de calefacción de Techem no se pudo leer en absoluto y terminó en la lista de bloqueo automático, y un medidor de agua Diehl informó su volumen con un nombre incorrecto. Esta versión vuelve a leerlos correctamente. Los estados escritos en 0.12.0 para dicho contador conservan sus nombres y valores incorrectos y pueden eliminarse; los correctos se escriben en el siguiente telegrama.",
+          "pl": "Wersja 0.12.0 błędnie rozszyfrowała te dwa zjawiska: podzielnik kosztów ciepła Techem zgłaszał bzdury, ciepłomierz Techem w ogóle nie mógł zostać odczytany i trafiał na listę automatycznych blokad, a wodomierz Diehl zgłaszał swoją objętość pod błędną nazwą. Ta wersja ponownie odczytuje je poprawnie. Stany 0.12.0 zapisane dla takiego licznika zachowują swoje błędne nazwy i wartości i można je usunąć - właściwe zostaną zapisane przy kolejnym telegramie.",
+          "uk": "Версія 0.12.0 неправильно розшифрувала ці два параметри: розподільник витрат на тепло Techem повідомив нісенітницю, теплолічильник Techem взагалі не вдалося зчитати й опинився в автоматичному списку блокувань, а водолічильник Diehl повідомив про свій об’єм під неправильною назвою. Ця версія знову читає їх правильно. Стани 0.12.0, записані для такого лічильника, зберігають свої неправильні назви та значення та можуть бути видалені - правильні записуються з наступною телеграмою.",
+          "zh-cn": "0.12.0 版本对这两个错误进行了解码：Techem 热量成本分配器报告了无意义的内容，Techem 热量表根本无法读取并最终出现在自动阻止列表中，而 Diehl 水表则以错误的名称报告了其流量。这个版本再次正确读取它们。为这种仪表编写的状态 0.12.0 保留其错误的名称和值，并且可以删除 - 正确的名称和值将在下一个电报中写入。"
         },
         "link": "https://github.com/lvogt/ioBroker.wireless-mbus#techem-and-diehl-prios-meters",
         "linkText": {
           "en": "Update notes",
-          "de": "Update-Hinweise"
+          "de": "Update-Hinweise",
+          "ru": "Обновить заметки",
+          "pt": "Atualizar notas",
+          "nl": "Opmerkingen bijwerken",
+          "fr": "Notes de mise à jour",
+          "it": "Note di aggiornamento",
+          "es": "Notas de actualización",
+          "pl": "Aktualizuj notatki",
+          "uk": "Оновити нотатки",
+          "zh-cn": "更新笔记"
         },
         "buttons": [
           "ok"
@@ -227,6 +281,9 @@
     "forcekWh": false,
     "autoBlocklist": true,
     "ignoreUnknownDevices": false,
+    "manufacturerSpecific": "{}",
+    "manufacturerSpecificTelegram": "",
+    "manufacturerSpecificPreview": [],
     "aeskeys": [],
     "blacklist": []
   },

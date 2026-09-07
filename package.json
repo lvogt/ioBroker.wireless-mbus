@@ -41,7 +41,8 @@
     "lib/receiver/*.js",
     "lib/SimpleLogger.js",
     "lib/ObjectHelper.js",
-    "lib/DeviceRegistry.js"
+    "lib/DeviceRegistry.js",
+    "lib/ManufacturerSpecific.js"
   ],
   "devDependencies": {
     "@alcalzone/release-script": "^5.2.1",

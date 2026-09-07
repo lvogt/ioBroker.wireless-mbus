@@ -487,6 +487,118 @@ tests.integration(path.join(__dirname, '..'), {
             }).timeout(15000);
         });
 
+        suite('Test manufacturer specific descriptions', getHarness => {
+            // An Itron smoke detector, whose blob the parser describes itself -
+            // a configured description replaces that one, which is what makes
+            // the two values below the only ones it yields.
+            const itron =
+                '4e44972678563412001a7a211300002f2f066d1220ee483200077f80802002533e170c' +
+                '0f0000010100000101000001012927283418311b39000001010000010100000000' +
+                '14310f370d00460100002f';
+            const descriptions = JSON.stringify({
+                ITW: [
+                    { byte: 4, description: 'Battery', unit: 'month', legacyName: 'VIF_BATTERY_MONTHS' },
+                    { byte: 5, description: 'Product code' },
+                ],
+            });
+
+            let harness;
+            before(async () => {
+                harness = getHarness();
+                await prepareAdapter(harness, { manufacturerSpecific: descriptions });
+                await harness.startAdapterAndWait();
+            });
+
+            it('writes the values a configured description names', async () => {
+                await sendTelegram({ frameType: 'A', containsCrc: false, data: itron });
+                await delay(2000);
+
+                const battery = await getState(harness, 'wireless-mbus.0.ITW-12345678.data.3-0-VIF_BATTERY_MONTHS');
+                expect(battery, 'the described value was not written').to.not.be.null;
+                expect(battery.val).to.equal(83);
+
+                const obj = await getObject(harness, 'wireless-mbus.0.ITW-12345678.data.3-0-VIF_BATTERY_MONTHS');
+                expect(obj.common.unit).to.equal('month');
+                expect(obj.common.name).to.match(/^Battery/);
+
+                // the description of the parser is replaced, not added to
+                const builtIn = await getObject(harness, 'wireless-mbus.0.ITW-12345678.data.27-0-VIF_NETWORK_MODE');
+                expect(builtIn, 'the built-in description was used as well').to.be.null;
+            }).timeout(15000);
+
+            it('Test checkManufacturerSpecific', async () => {
+                // The report is the result itself: a mapped result would be
+                // alerted a second time in its raw form, which is what showed
+                // the name of a text instead of the text.
+                const ok = await sendToAdapter(harness, 'checkManufacturerSpecific', { descriptions });
+                expect(ok.result).to.match(/ITW: 2 field\(s\)/);
+                expect(ok.args).to.be.undefined;
+
+                const broken = await sendToAdapter(harness, 'checkManufacturerSpecific', {
+                    descriptions: '{"ITW":[{"byte":0,"bit":9,"description":"Flag"}]}',
+                });
+                expect(broken.result).to.match(/bit 9 is outside of the field/);
+
+                const noJson = await sendToAdapter(harness, 'checkManufacturerSpecific', { descriptions: '{oops' });
+                expect(noJson.result).to.match(/not valid JSON/);
+
+                const empty = await sendToAdapter(harness, 'checkManufacturerSpecific', { descriptions: '{}' });
+                expect(empty.result).to.match(/No description is configured/);
+            }).timeout(15000);
+
+            it('Test exampleManufacturerSpecific', async () => {
+                const empty = await sendToAdapter(harness, 'exampleManufacturerSpecific', { descriptions: '{}' });
+                expect(empty.result).to.equal('manufacturerSpecificExampleInserted');
+                expect(Object.keys(JSON.parse(empty.native.manufacturerSpecific))).to.eql(['XXX']);
+
+                // what somebody wrote is never overwritten, not even a
+                // description that does not parse yet
+                const written = await sendToAdapter(harness, 'exampleManufacturerSpecific', { descriptions });
+                expect(written.native).to.be.undefined;
+                expect(written.result).to.match(/description already/);
+
+                const halfTyped = await sendToAdapter(harness, 'exampleManufacturerSpecific', {
+                    descriptions: '{"ITW": [',
+                });
+                expect(halfTyped.native).to.be.undefined;
+            }).timeout(15000);
+
+            it('Test previewManufacturerSpecific', async () => {
+                const preview = await sendToAdapter(harness, 'previewManufacturerSpecific', {
+                    descriptions,
+                    telegram: itron,
+                });
+
+                expect(preview.result).to.equal('manufacturerSpecificPreviewOk');
+                expect(preview.args).to.eql([2]);
+
+                // the rows of the table the tab shows
+                const rows = preview.native.manufacturerSpecificPreview;
+                expect(rows).to.have.lengthOf(4);
+                expect(rows[2]).to.eql({
+                    state: 'ITW-12345678.data.3-0-VIF_BATTERY_MONTHS',
+                    name: 'Battery',
+                    value: '83',
+                    unit: 'month',
+                    source: 'description',
+                });
+                expect(rows[0].source).to.equal('telegram');
+
+                const notHex = await sendToAdapter(harness, 'previewManufacturerSpecific', {
+                    descriptions,
+                    telegram: 'no telegram',
+                });
+                expect(notHex.result).to.equal('manufacturerSpecificNoTelegram');
+
+                const tooShort = await sendToAdapter(harness, 'previewManufacturerSpecific', {
+                    descriptions,
+                    telegram: '4e449726785634',
+                });
+                expect(tooShort.result).to.equal('manufacturerSpecificReport');
+                expect(tooShort.args[0]).to.match(/could not be decoded/);
+            }).timeout(15000);
+        });
+
         suite('Other tests', getHarness => {
             let harness;
             before(async () => {

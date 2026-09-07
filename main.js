@@ -22,6 +22,7 @@ const { WirelessMbusParser, guessDeviceId } = require('wireless-mbus-parser');
 const { listReceivers, getReceiver } = require('./lib/receiver');
 const ObjectHelper = require('./lib/ObjectHelper.js');
 const DeviceRegistry = require('./lib/DeviceRegistry.js');
+const { buildHandlers, readDescriptions, EXAMPLE_DESCRIPTION } = require('./lib/ManufacturerSpecific.js');
 const { SerialPort } = require('serialport');
 
 // Parse errors that are expected during normal operation and must not count
@@ -83,6 +84,10 @@ class WirelessMbus extends utils.Adapter {
         // "ignoreUnknownDevices" goes by - and the record layouts of their
         // telegrams
         this.deviceRegistry = new DeviceRegistry();
+        // Configured descriptions of manufacturer specific data records, as
+        // the handlers the parser takes
+        /** @type {Record<string, import('wireless-mbus-parser').ManufacturerSpecificDataRecordHandler>} */
+        this.manufacturerSpecificHandlers = {};
         this.stateValues = {};
     }
 
@@ -154,12 +159,40 @@ class WirelessMbus extends utils.Adapter {
             });
         }
 
+        this.loadManufacturerSpecificDescriptions();
         await this.loadKnownDevices();
 
         this.receivers = listReceivers();
         this.setConnected(false);
 
         await this.connectReceiver();
+    }
+
+    /**
+     * Take over the descriptions of manufacturer specific data records.
+     *
+     * A description the parser rejects is reported and left out rather than
+     * taken along: it is configuration somebody typed, and the meters of the
+     * other descriptions have nothing to do with it. This has to happen before
+     * the parser is created.
+     */
+    loadManufacturerSpecificDescriptions() {
+        const { handlers, reports, error } = buildHandlers(this.config.manufacturerSpecific);
+
+        if (error) {
+            this.log.warn(`The manufacturer specific descriptions are ignored: they are ${error}`);
+        }
+
+        for (const report of reports.filter(entry => entry.error)) {
+            this.log.warn(`The description of ${report.manufacturer} is ignored: it ${report.message}`);
+        }
+
+        const manufacturers = Object.keys(handlers);
+        if (manufacturers.length) {
+            this.log.info(`Describing the manufacturer specific data of ${manufacturers.join(', ')}`);
+        }
+
+        this.manufacturerSpecificHandlers = handlers;
     }
 
     /**
@@ -196,7 +229,10 @@ class WirelessMbus extends utils.Adapter {
         const cachedDataRecordHeaders = this.deviceRegistry.layouts();
 
         try {
-            return new WirelessMbusParser({ cachedDataRecordHeaders });
+            return new WirelessMbusParser({
+                cachedDataRecordHeaders,
+                manufacturerSpecificHandlers: this.manufacturerSpecificHandlers,
+            });
         } catch (error) {
             // A stored layout the parser rejects must not cost the adapter its
             // ability to receive anything at all
@@ -711,6 +747,124 @@ class WirelessMbus extends utils.Adapter {
         };
     }
 
+    /**
+     * What the parser makes of the descriptions in the open form: one line per
+     * manufacturer, with the message the parser rejected a description with -
+     * which is what tells its author where it is wrong.
+     *
+     * The text goes back as the result itself rather than through the "result"
+     * map of the control: a mapped result is shown *and* alerted a second time
+     * in its raw form unless the control writes a native back, which is what
+     * showed the name of the text instead of the text. What it says is the
+     * report of the parser, which is English wherever it comes from.
+     *
+     * @param {{ descriptions?: unknown }} [message] the descriptions, as the jsonConfig control sends them
+     */
+    checkManufacturerSpecific(message) {
+        const configured =
+            message && 'descriptions' in message ? message.descriptions : this.config.manufacturerSpecific;
+        const { reports, error } = buildHandlers(configured);
+
+        if (error) {
+            return { result: `The descriptions are ${error}` };
+        }
+
+        if (!reports.length) {
+            return { result: 'No description is configured' };
+        }
+
+        return { result: reports.map(report => `${report.manufacturer}: ${report.message}`).join('\n') };
+    }
+
+    /**
+     * Hand the editor an example description, for somebody who has nothing to
+     * start from - but never over a description somebody wrote, not even a
+     * broken one: what is in the editor may be half typed.
+     *
+     * @param {{ descriptions?: unknown }} [message] the descriptions of the open form
+     */
+    exampleManufacturerSpecific(message) {
+        const configured =
+            message && 'descriptions' in message ? message.descriptions : this.config.manufacturerSpecific;
+        const { descriptions, error } = readDescriptions(configured);
+
+        if (error || Object.keys(descriptions).length) {
+            // A plain text is alerted as it is; a mapped one would be shown
+            // twice, because nothing is written back to the form here.
+            return { result: 'There is a description already - the example is in the README of the adapter' };
+        }
+
+        return {
+            native: { manufacturerSpecific: EXAMPLE_DESCRIPTION },
+            result: 'manufacturerSpecificExampleInserted',
+        };
+    }
+
+    /**
+     * Decode one telegram with the descriptions of the open form and answer
+     * with the states it would write - which is the only way to see whether a
+     * description names the right bytes without saving it first.
+     *
+     * The rows go into a table of the form through "useNative": a row per
+     * state, and the source column says whether it is a record of the telegram
+     * or a value a description got out of one.
+     *
+     * @param {{ descriptions?: unknown, telegram?: unknown }} [message] the descriptions and the telegram, as hex
+     */
+    async previewManufacturerSpecific(message) {
+        const hex = String((message && message.telegram) || '').replace(/[\s:.-]/g, '');
+        /** @type {{ manufacturerSpecificPreview: object[] }} */
+        const native = { manufacturerSpecificPreview: [] };
+
+        if (!hex.length || hex.length % 2 || !/^[0-9a-fA-F]+$/.test(hex)) {
+            return { native, result: 'manufacturerSpecificNoTelegram' };
+        }
+
+        const { handlers, error } = buildHandlers(message && message.descriptions);
+        if (error) {
+            return { native, result: 'manufacturerSpecificReport', args: [`The descriptions are ${error}`] };
+        }
+
+        const data = Buffer.from(hex, 'hex');
+        // Nobody says whether a telegram pasted from a log carries its CRCs,
+        // so let the parser look for them
+        const options = { verbose: true, key: this.getAesKeyBuffer(guessDeviceId(data)) };
+
+        try {
+            const parsed = await new WirelessMbusParser({ manufacturerSpecificHandlers: handlers }).parse(
+                data,
+                /** @type {import('wireless-mbus-parser').ParserOptionsFull} */ (options),
+            );
+            const result = WirelessMbusParser.toLegacyResult(parsed);
+            const device = `${result.deviceInformation.Manufacturer}-${result.deviceInformation.Id}`;
+
+            const rows = result.dataRecord.map((record, index) => ({
+                // the id the adapter would write, so it can be looked up
+                state: `${device}.data.${record.number}-${record.storageNo}-${record.type}`,
+                name: record.description,
+                value: `${record.value}`,
+                unit: record.unit,
+                // everything behind the records of the telegram came out of a
+                // manufacturer specific blob
+                source: index < parsed.dataRecords.length ? 'telegram' : 'description',
+            }));
+
+            native.manufacturerSpecificPreview = rows;
+            return {
+                native,
+                result: 'manufacturerSpecificPreviewOk',
+                args: [rows.filter(row => row.source === 'description').length],
+            };
+        } catch (thrown) {
+            const error = thrown instanceof Error ? thrown : new Error(`${thrown}`);
+            return {
+                native,
+                result: 'manufacturerSpecificReport',
+                args: [`The telegram could not be decoded: ${error.name} - ${error.message}`],
+            };
+        }
+    }
+
     onMessage(obj) {
         if (typeof obj === 'object' && obj.callback) {
             switch (obj.command) {
@@ -734,6 +888,17 @@ class WirelessMbus extends utils.Adapter {
                         obj.command,
                         this.listWmbusModeOptions(obj.message && obj.message.deviceType),
                         obj.callback,
+                    );
+                    break;
+                case 'exampleManufacturerSpecific':
+                    this.sendTo(obj.from, obj.command, this.exampleManufacturerSpecific(obj.message), obj.callback);
+                    break;
+                case 'checkManufacturerSpecific':
+                    this.sendTo(obj.from, obj.command, this.checkManufacturerSpecific(obj.message), obj.callback);
+                    break;
+                case 'previewManufacturerSpecific':
+                    this.previewManufacturerSpecific(obj.message).then(result =>
+                        this.sendTo(obj.from, obj.command, result, obj.callback),
                     );
                     break;
                 case 'importNeedsKey':

@@ -191,6 +191,156 @@
                 }
             }
         },
+        "tabManufacturer": {
+            "type": "panel",
+            "label": "Manufacturer specific data",
+            "items": {
+                "manufacturerSpecificInfo": {
+                    "type": "infoBox",
+                    "text": "manufacturerSpecificHint",
+                    "boxType": "info",
+                    "closeable": false,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "descriptionsHeader": {
+                    "type": "header",
+                    "text": "Descriptions per manufacturer",
+                    "size": 3,
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "descriptionsEditorHint": {
+                    "type": "staticText",
+                    "text": "manufacturerSpecificEditorHint",
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "manufacturerSpecific": {
+                    "type": "jsonEditor",
+                    "label": "Descriptions per manufacturer",
+                    "help": "manufacturerSpecificFieldReference",
+                    "helpLink": "https://github.com/lvogt/wireless-mbus-parser#describing-a-blob-instead-of-decoding-it",
+                    "allowEmpty": true,
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 6,
+                    "md": 4,
+                    "lg": 3,
+                    "xl": 2
+                },
+                "checkManufacturerSpecific": {
+                    "type": "sendTo",
+                    "label": "Check the descriptions",
+                    "command": "checkManufacturerSpecific",
+                    "jsonData": "{\"descriptions\": ${JSON.stringify(data.manufacturerSpecific || '')}}",
+                    "variant": "outlined",
+                    "icon": "search",
+                    "xs": 12,
+                    "sm": 6,
+                    "md": 4,
+                    "lg": 3,
+                    "xl": 2
+                },
+                "exampleManufacturerSpecific": {
+                    "type": "sendTo",
+                    "label": "Insert an example",
+                    "command": "exampleManufacturerSpecific",
+                    "jsonData": "{\"descriptions\": ${JSON.stringify(data.manufacturerSpecific || '')}}",
+                    "useNative": true,
+                    "result": {
+                        "manufacturerSpecificExampleInserted": "manufacturerSpecificExampleInserted"
+                    },
+                    "variant": "outlined",
+                    "icon": "add",
+                    "xs": 12,
+                    "sm": 6,
+                    "md": 4,
+                    "lg": 3,
+                    "xl": 2
+                },
+                "previewHeader": {
+                    "type": "header",
+                    "text": "Try a description on a telegram",
+                    "size": 3,
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "previewHint": {
+                    "type": "staticText",
+                    "text": "manufacturerSpecificTelegramHelp",
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "manufacturerSpecificTelegram": {
+                    "type": "text",
+                    "label": "Telegram as hex",
+                    "placeholder": "2C446532821851582C067AE1000000046D19...",
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 6,
+                    "xl": 5
+                },
+                "previewManufacturerSpecific": {
+                    "type": "sendTo",
+                    "label": "Decode it with the descriptions",
+                    "command": "previewManufacturerSpecific",
+                    "jsonData": "{\"descriptions\": ${JSON.stringify(data.manufacturerSpecific || '')}, \"telegram\": ${JSON.stringify(data.manufacturerSpecificTelegram || '')}}",
+                    "useNative": true,
+                    "result": {
+                        "manufacturerSpecificPreviewOk": "manufacturerSpecificPreviewOk",
+                        "manufacturerSpecificNoTelegram": "manufacturerSpecificNoTelegram",
+                        "manufacturerSpecificReport": "manufacturerSpecificReport"
+                    },
+                    "variant": "outlined",
+                    "icon": "play",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 4,
+                    "xl": 3
+                },
+                "manufacturerSpecificPreview": {
+                    "type": "table",
+                    "label": "What it would write",
+                    "noDelete": true,
+                    "items": [
+                        { "type": "text", "attr": "state", "title": "State", "width": "32%", "readOnly": true },
+                        { "type": "text", "attr": "name", "title": "Name", "width": "32%", "readOnly": true },
+                        { "type": "text", "attr": "value", "title": "Value", "width": "18%", "readOnly": true },
+                        { "type": "text", "attr": "unit", "title": "Unit", "width": "8%", "readOnly": true },
+                        { "type": "text", "attr": "source", "title": "Source", "width": "10%", "readOnly": true }
+                    ],
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                }
+            }
+        },
         "tabBlocklist": {
             "type": "panel",
             "label": "Blocked Devices",
