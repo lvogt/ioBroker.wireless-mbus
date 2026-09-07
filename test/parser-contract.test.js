@@ -281,6 +281,92 @@ describe('Parser contract: manufacturer specific telegrams', () => {
     });
 });
 
+describe('Parser contract: manufacturer specific data records', () => {
+    /*
+     * Parser 1.4.0 started decoding the blob a meter packs into a manufacturer
+     * specific data record, and 1.5.0 gives every value it extracts a name of
+     * its own. Both matter for the object tree: the values are appended to the
+     * ones of the telegram, so the records that were there before keep their
+     * position and their state id, and the derived ones get an id that says
+     * what they are rather than a shared VIF_MANUFACTURER_SPECIFIC.
+     */
+    const smokeDetector =
+        '4e44972678563412001a7a211300002f2f066d1220ee483200077f80802002533e170c' +
+        '0f0000010100000101000001012927283418311b39000001010000010100000000' +
+        '14310f370d00460100002f';
+
+    /** @type {InstanceType<typeof WirelessMbusParser>} */
+    let parser;
+    beforeEach(() => {
+        parser = new WirelessMbusParser();
+    });
+
+    it('appends the decoded values behind the records of the telegram', async () => {
+        const result = await parse(parser, smokeDetector);
+
+        expect(result.deviceInformation.Manufacturer).to.equal('ITW');
+        expect(result.deviceInformation.Medium).to.equal('Smokedetector');
+
+        // the two records the telegram really has, unchanged - the blob keeps
+        // its own state, which is what an existing installation has been
+        // writing all along
+        expect(result.dataRecord.map(stateId).slice(0, 2)).to.eql([
+            '1-0-VIF_TIME_POINT_DATE_TIME',
+            '2-0-VIF_TYPE_MANUFACTURER_UNKOWN',
+        ]);
+        expect(result.dataRecord).to.have.lengthOf(28);
+
+        const derived = result.dataRecord.slice(2);
+        // the storage number and the tariff of the record they were taken from
+        expect(derived.map(record => `${record.storageNo}-${record.tariff}`)).to.eql(Array(26).fill('0-0'));
+    });
+
+    it('gives every decoded value an id of its own', async () => {
+        const result = await parse(parser, smokeDetector);
+
+        // What tells these states apart is their name, not their position: a
+        // parser that learns to decode one more of the reserved bits shifts
+        // the numbers, and an id that says what it holds survives that as an
+        // id that no longer matches - rather than as a state whose meaning
+        // silently changed.
+        const derived = result.dataRecord.slice(2);
+        expect(new Set(derived.map(record => record.type)).size).to.equal(26);
+        expect(new Set(result.dataRecord.map(stateId)).size).to.equal(28);
+
+        expect(derived.map(stateId).slice(0, 3)).to.eql([
+            '3-0-VIF_DATA_ENCRYPTED',
+            '4-0-VIF_MODEM_CODE_CORRUPT',
+            '5-0-VIF_MODEM_MEMORY_CORRUPT',
+        ]);
+        expect(derived.map(stateId).slice(-2)).to.eql(['27-0-VIF_NETWORK_MODE', '28-0-VIF_FIXED_DATE_BILLING']);
+    });
+
+    it('names and types every value it extracted', async () => {
+        const result = await parse(parser, smokeDetector);
+        const byType = Object.fromEntries(result.dataRecord.map(record => [record.type, record]));
+
+        expect(byType['VIF_BATTERY_REMAINING'].value).to.equal(83);
+        expect(byType['VIF_BATTERY_REMAINING'].unit).to.equal('month');
+        expect(byType['VIF_BATTERY_REMAINING'].description).to.equal('Remaining battery lifetime');
+        // a flag is a number, and a value the meter names is a string
+        expect(byType['VIF_MODEM_REMOVAL'].value).to.equal(1);
+        expect(byType['VIF_WARNING_SMOKE_ALARM'].value).to.equal(0);
+        expect(byType['VIF_NETWORK_MODE'].value).to.equal('Walk-by');
+        // the reserved bits are not reported at all
+        expect(result.dataRecord.every(record => record.description.length)).to.be.true;
+    });
+
+    it('keeps the decoded values out of the record layout', async () => {
+        const parsed = await parser.parse(Buffer.from(smokeDetector, 'hex'), { verbose: true, containsCrc: false });
+
+        // The layout describes the telegram, and the adapter stores it with
+        // the device to decode compact telegrams - a derived value in there
+        // would be one the meter never sent.
+        expect(parsed.dataRecords).to.have.lengthOf(2);
+        expect(WirelessMbusParser.getDataRecordHeadersCacheEntry(parsed).cachedDataRecordHeaders).to.have.lengthOf(2);
+    });
+});
+
 describe('Parser contract: compact frames', () => {
     // A compact frame carries only a header signature; the record layout comes
     // from a previously seen full frame. The adapter therefore keeps one

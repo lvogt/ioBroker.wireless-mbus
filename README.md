@@ -115,6 +115,9 @@ battery life of a PRIOS meter is reported in months rather than in years.
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (ChL) Update wireless-mbus-parser to 1.5.0: it decodes the blob a meter packs into a manufacturer specific data record - for now that of an Itron smoke detector, whose configuration and error flags become states of their own, each under a name that says what it holds. They are added behind the states a meter already has, which keep their names.
+
 ### 0.12.3 (2026-09-07)
 * (ChL) Fix the CUL initialisation on the receivers that lose the first byte written after the line has been idle: every command is now sent with a separator in front of it, which is what gets lost instead of the command letter, and setting the mode waits for its confirmation rather than failing on a line that crossed it (#312)
 
