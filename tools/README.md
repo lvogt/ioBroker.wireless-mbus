@@ -61,6 +61,7 @@ of that and hands the telegram straight to the parser.
 | `plain` | LSE-58511882, six data records, decodes without a key |
 | `volume` | CEN-12345678, a volume in m³, frame type B with CRCs |
 | `encrypted` | ELS-12345678, needs the key `000102030405060708090A0B0C0D0E0F` in the AES key list |
+| `itron` | ITW-12345678, an Itron smoke detector - the 26 values its manufacturer specific record holds |
 | `unknown-key` | KAM-63452869, encrypted with a key nobody has - the "Check for new devices that need a key" button offers it afterwards |
 
 `node tools/send-telegram.js --list` prints them, `--help` the options. Anything that is not a

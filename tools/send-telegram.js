@@ -42,6 +42,15 @@ const SAMPLES = {
         containsCrc: true,
         data: '434493157856341233037AC98C2075900F002C25B30A000021924D4FBA372FB66E017A75002007109058475F4BC9D1281DF878B80A1B0F98B629024AAC7279429398BFC549233C0140829B93BAA1',
     },
+    itron: {
+        description: 'ITW-12345678, an Itron smoke detector - its manufacturer specific record becomes 26 states',
+        frameType: 'A',
+        containsCrc: false,
+        data:
+            '4e44972678563412001a7a211300002f2f066d1220ee483200077f80802002533e170c' +
+            '0f0000010100000101000001012927283418311b39000001010000010100000000' +
+            '14310f370d00460100002f',
+    },
     'unknown-key': {
         description: 'KAM-63452869, encrypted with a key nobody has - ends up in the "needs key" list',
         frameType: 'A',
