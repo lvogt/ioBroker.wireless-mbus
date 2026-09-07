@@ -76,7 +76,7 @@ describe('IMSTv2 SLIP framing', () => {
 
     /** Pretend a command was sent and is waiting for its response. */
     function expectResponse() {
-        receiver.readPromises.push(data => responses.push(data));
+        receiver.readPromises.push({ accepts: () => true, deliver: data => responses.push(data) });
     }
 
     function receive(...chunks) {

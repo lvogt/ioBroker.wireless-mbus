@@ -73,10 +73,14 @@ async function initDevice(deviceClass, mode, port, timers) {
     await receiver.init();
 }
 
+/** What the device mock of this receiver reads its properties from. */
+function writeDeviceConfig(deviceClass, deviceConfig) {
+    fs.writeFileSync(`./${deviceClass}.config.json`, JSON.stringify(deviceConfig, null, 4));
+}
+
 async function testInit(deviceClass, mode, deviceConfig, suffix) {
-    const path = `./${deviceClass}.config.json`;
     if (typeof deviceConfig !== 'undefined') {
-        fs.writeFileSync(path, JSON.stringify(deviceConfig, null, 4));
+        writeDeviceConfig(deviceClass, deviceConfig);
     }
 
     await initDevice(deviceClass, mode);
@@ -164,6 +168,28 @@ describe('Test CUL receiver', () => {
     it('init C mode', async () => {
         await testInit('CulReceiver', 'C');
     });
+
+    // Both commands used to reach the firmware without their command letter:
+    // the version command became an empty line, and "X21" became "21", which
+    // culfw answered with "? (21 is unknown) ...". Up to 0.11.0 that answer
+    // and the TMODE line behind it were taken for one response, whose end
+    // happened to be the expected one - since 0.12.0 the lines are told apart
+    // and the first one failed the init for good (issue #312).
+    //
+    // The generous timeout leaves room for the receiver's own read timeout, so
+    // that a regression fails with what the receiver said rather than with the
+    // timeout of this test.
+    it('init T mode - a receiver that loses the first byte of every write', async () => {
+        writeDeviceConfig('CulReceiver', { losesFirstByte: true });
+
+        await initDevice('CulReceiver', 'T');
+
+        const device = receiver.port;
+        receiver = null;
+
+        expect(device.mode, 'the mode command reached the firmware intact').to.equal('TMODE');
+        expect(device.txReport, 'the data reporting command reached the firmware intact').to.equal(0x21);
+    }).timeout(5000);
 
     it('send telegram', async () => {
         const msg = await testTelegram('CulReceiver');
