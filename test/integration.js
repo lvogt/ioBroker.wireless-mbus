@@ -144,7 +144,8 @@ async function startCulServer() {
     const server = net.createServer(socket => {
         sockets.push(socket);
         socket.on('data', data => {
-            const command = data.toString('ascii');
+            // Commands come with a leading separator, which culfw ignores
+            const command = data.toString('ascii').replace(/^[\r\n]+/, '');
             if (command.startsWith('V')) {
                 socket.write('V 1.30 CUL868\r\n');
             } else if (command.includes('br')) {

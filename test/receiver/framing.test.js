@@ -68,7 +68,8 @@ function createReceiver(ReceiverClass, mode) {
          */
         debugged: text => debugs.some(message => message.includes(text)),
         /** Pretend a command was sent and is waiting for its response. */
-        expectResponse: () => receiver.readPromises.push(data => responses.push(data)),
+        expectResponse: () =>
+            receiver.readPromises.push({ accepts: () => true, deliver: data => responses.push(data) }),
         receive: (...chunks) =>
             chunks.forEach(chunk => receiver.onData(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, 'ascii'))),
     };
@@ -353,6 +354,46 @@ describe('CUL framing', () => {
         cul.receive(`\r\n\r\nTMODE\r\n`);
 
         expect(cul.responses.map(response => response.toString('ascii'))).to.eql(['TMODE']);
+    });
+
+    it('waits for the mode confirmation when another line comes first', async () => {
+        const cul = createReceiver(CulReceiver, 'T');
+        cul.receiver.port = { write: (_data, callback) => callback(null) };
+
+        const settingMode = cul.receiver.setDataReportingAndMode();
+        await new Promise(resolve => setImmediate(resolve));
+
+        // Both lines share a chunk, which is how the CUL of issue #312 sends
+        // them. The first one was handed out as the answer to the command and
+        // failed it, and nothing was left waiting for the second one.
+        cul.receive(`? (21 is unknown) Use one of B b C e F G K l M R T t V W X x\r\nTMODE\r\n`);
+
+        await settingMode;
+
+        expect(
+            cul.warns.some(message => message.includes('21 is unknown')),
+            'the line it skipped',
+        ).to.be.true;
+        expect(cul.infos.some(message => message.includes('T-MODE'))).to.be.true;
+    });
+
+    it('reports what it saw when the mode confirmation never comes', async () => {
+        const cul = createReceiver(CulReceiver, 'T');
+        cul.receiver.port = { write: (_data, callback) => callback(null) };
+        cul.receiver.readTimeout = 50;
+
+        const settingMode = cul.receiver.setDataReportingAndMode();
+        await new Promise(resolve => setImmediate(resolve));
+
+        cul.receive(`? (21 is unknown) Use one of B b C e F G K l M R T t V W X x\r\n`);
+
+        const error = await settingMode.then(
+            () => null,
+            error => error,
+        );
+
+        expect(error, 'setting the mode should have failed').to.be.an('error');
+        expect(error.message).to.match(/^Failed to set TMODE: .*last response was \? \(21 is unknown\)/);
     });
 });
 

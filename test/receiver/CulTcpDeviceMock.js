@@ -31,7 +31,9 @@ class CulTcpDeviceMock {
     }
 
     getResponse(data) {
-        const str = data.toString();
+        // culfw ignores an empty line, so the separator every command is sent
+        // with in front of it never reaches a command handler
+        const str = data.toString().replace(/^[\r\n]+/, '');
 
         if (str === 'X21\r\nbrt\r\n') {
             return Buffer.from('TMODE\r\n');
