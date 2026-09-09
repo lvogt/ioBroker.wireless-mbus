@@ -1,4 +1,10 @@
 # Older changes
+## 0.11.0 (2026-08-29)
+* (ChL) Require node.js 22 or newer, js-controller >=6.0.11 and admin >=7.6.20
+* (ChL) Switch to @iobroker/eslint-config (ESLint 9 + Prettier)
+* (ChL) Add release-script based release management
+* (ChL) Include the admin translations in the published package
+
 ## 0.10.2
 * (ChL) Improve robustness of IMST iU891A-XL communication
 

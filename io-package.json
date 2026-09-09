@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "wireless-mbus",
-    "version": "0.12.3",
+    "version": "0.13.0",
     "news": {
+      "0.13.0": {
+        "en": "Describe the manufacturer specific data records of a meter in the admin UI, the results become states of their own\nUpdate wireless-mbus-parser to 1.5.0: support for decoding manufacturer specific blobs - description for Itron smoke detector included.",
+        "de": "Hrstellerspezifischen Daten eines Zählers können in der Admin-UI definiert werden. Die Ergebnisse werden als eigener State angelegt.\nWireless-mbus-Parser auf 1.5.0 aktualisiert: Dekodierung herstellerspezifischer Blobs — inklusive Beschreibung des Itron-Rauchmelders.",
+        "ru": "Опишите данные измерителя, специфичные для производителя, в пользовательском интерфейсе администратора, результаты станут самостоятельными состояниями\nОбновите wireless-mbus-parser до версии 1.5.0: поддержка декодирования больших двоичных объектов производителя — описание дымового детектора Itron включено.",
+        "pt": "Descreva os registros de dados específicos do fabricante de um medidor na UI do admin.\nAtualize o wireless-mbus-parser para 1.5.0: suporte para decodificar bolhas do fabricante - inclui descrição do detector Itron.",
+        "nl": "Beschrijf de fabrikantspecifieke gegevensrecords van een meter in de beheerinterface, het resultaat wordt een eigen status\nUpdate de wireless-mbus-parser naar 1.5.0: ondersteuning voor het decoderen van fabrikantspecifieke blobs - inclusief beschrijving van de Itron rookmelder.",
+        "fr": "Décrivez les données spécifiques au fabricant d'un compteur dans l'interface d'administration, pour en faire un état\nMise à jour de Wireless-Mbus-Parser vers la 1.5.0 : prise en charge du décodage des blobs spécifiques au fabricant, description incluse.",
+        "it": "Descrivi i record di dati specifici del produttore di un contatore nell'interfaccia utente admin\nAggiorna wireless-mbus-parser a 1.5.0: supporto per decodificare i blob specifici del produttore - descrizione del rilevatore di fumo Itron inclusa.",
+        "es": "Describa los registros de datos específicos del fabricante de un contador en la interfaz de usuario y el resultado será su propio\nActualice wireless-mbus-parser a 1.5.0: admite decodificar manchas específicas del fabricante, descripción del detector de humo Itron incluida.",
+        "pl": "Opisz specyficzne dla producenta rekordy danych miernika w interfejsie administratora, wynik stanie się ich własnymi stanami\nZaktualizuj wireless-mbus-parser do wersji 1.5.0: obsługa dekodowania blob specyficznych dla producenta - opis czujnika dymu Itron w zestawie.",
+        "uk": "Опишіть конкретні дані виробника записи лічильника в інтерфейсі адміністратора, результатом стають власні стани\nОновлення бездротового mbus-parser до 1.5.0: підтримка декодування специфічних для виробника блоб - опис для детектора диму Itron включено.",
+        "zh-cn": "在管理员界面中描述仪表的制造商特定数据记录，结果将变为自己的状态\n将 wireless-mbus-parser 更新到 1.5.0：支持解码制造商特定的斑点-包括 Itron 烟雾探测器的描述。"
+      },
       "0.12.3": {
         "en": "Fix the CUL initialisation on the receivers that lose the first byte written after the line has been idle (#312)",
         "de": "Fix für die CUL-Initialisierung auf Empfängern, die das erste Byte nach Inaktivität verlieren (#312)",
@@ -80,19 +93,6 @@
         "pl": "Popraw solidność komunikacji IMST IU891A-XL",
         "uk": "Поліпшити надійність IMST IU891A-xL Communication",
         "zh-cn": "提高IMST IU891A-XL通信的鲁棒性"
-      },
-      "0.10.1": {
-        "en": "Fix SLIP encoder used by IMST iU891A-XL",
-        "de": "Korrektur des SLIP Encoders für IMST iU891A-XL",
-        "ru": "Fix Slip Encoder, используемый IMST IU891A-XL",
-        "pt": "Corrigir o codificador de deslizamento usado pelo IMST IU891A-XL",
-        "nl": "Fix Slip Encoder gebruikt door IMST IU891A-XL",
-        "fr": "Correction de l'encodeur de glissement utilisé par IMST IU891A-XL",
-        "it": "Fix Slip Encoder usato da IMST IU891A-XL",
-        "es": "Corrección de codificador de deslizamiento utilizado por IMST IU891A-XL",
-        "pl": "Fix Slip Encoder używany przez IMST IU891A-XL",
-        "uk": "Виправити кодер ковзання, який використовується IMST IU891A-XL",
-        "zh-cn": "修复IMST IU891A-XL使用的固定滑动编码器"
       }
     },
     "messages": [

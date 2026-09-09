@@ -182,7 +182,7 @@ battery life of a PRIOS meter is reported in months rather than in years.
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.13.0 (2026-09-09)
 * (ChL) Describe the manufacturer specific data records of a meter in the admin UI, the result become states of their own
 * (ChL) Update wireless-mbus-parser to 1.5.0: support for decoding manufacturer specific blobs - description for Itron smoke detector included.
 
@@ -214,12 +214,6 @@ battery life of a PRIOS meter is reported in months rather than in years.
 * (ChL) The adapter reconnects to the receiver instead of staying idle or stopping when the connection fails
 * (ChL) Fix telegrams getting lost when several meters transmit at once, and damaged data being reported as readings of devices that do not exist
 * (ChL) Declare the state that holds the raw data of an unreadable telegram as text rather than as a numeric value
-
-### 0.11.0 (2026-08-29)
-* (ChL) Require node.js 22 or newer, js-controller >=6.0.11 and admin >=7.6.20
-* (ChL) Switch to @iobroker/eslint-config (ESLint 9 + Prettier)
-* (ChL) Add release-script based release management
-* (ChL) Include the admin translations in the published package
 
 [Older changelogs can be found there](CHANGELOG_OLD.md)
 
