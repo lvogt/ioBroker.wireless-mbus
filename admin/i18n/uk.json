@@ -38,6 +38,7 @@
     "manufacturerSpecificPreviewOk": "Розкодовано - %s значень отримано із специфічного для виробника запису",
     "manufacturerSpecificReport": "%s",
     "manufacturerSpecificTelegramHelp": "Вставте тут телеграму, щоб побачити, що зроблять з нею описи вище. Нічого не зберігається і жоден стан не записується - вона лише розкодовується.",
+    "manufacturerSpecificTelegramPlaceholder": "2C446532821851582C067AE1000000046D19...",
     "serialBaudRate": "Послідовна швидкість передачі даних",
     "serialPort": "Послідовний порт",
     "serialPortHelp": "Виберіть порт або введіть його - для послідовного пристрою, доступного через мережу, використовуйте tcp://host:port",

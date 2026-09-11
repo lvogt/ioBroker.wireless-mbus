@@ -38,6 +38,7 @@
     "manufacturerSpecificPreviewOk": "Декодировано - %s значений получено из специфического для производителя записи",
     "manufacturerSpecificReport": "%s",
     "manufacturerSpecificTelegramHelp": "Вставьте здесь телеграмму, чтобы увидеть, что сделают с ней описания выше. Ничего не сохраняется и никакие состояния не записываются - она только декодируется.",
+    "manufacturerSpecificTelegramPlaceholder": "2C446532821851582C067AE1000000046D19...",
     "serialBaudRate": "Скорость передачи",
     "serialPort": "Серийный порт",
     "serialPortHelp": "Выберите порт или введите его — для последовательного устройства, доступного по сети, используйте tcp://host:port.",

@@ -294,7 +294,7 @@
                 "manufacturerSpecificTelegram": {
                     "type": "text",
                     "label": "Telegram as hex",
-                    "placeholder": "2C446532821851582C067AE1000000046D19...",
+                    "placeholder": "manufacturerSpecificTelegramPlaceholder",
                     "newLine": true,
                     "xs": 12,
                     "sm": 12,

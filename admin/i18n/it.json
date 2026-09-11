@@ -38,6 +38,7 @@
     "manufacturerSpecificPreviewOk": "Decodificato - %s valore(i) provenivano da un record specifico del produttore",
     "manufacturerSpecificReport": "%s",
     "manufacturerSpecificTelegramHelp": "Incolli qui un telegramma per vedere cosa ne farebbero le descrizioni sopra. Non viene salvato nulla e non viene scritto nessuno stato: viene solo decodificato.",
+    "manufacturerSpecificTelegramPlaceholder": "2C446532821851582C067AE1000000046D19...",
     "serialBaudRate": "Baud rate seriale",
     "serialPort": "Porta seriale",
     "serialPortHelp": "Selezionare una porta o digitarne una: per un dispositivo seriale raggiungibile tramite la rete utilizzare tcp://host:port",

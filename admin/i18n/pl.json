@@ -38,6 +38,7 @@
     "manufacturerSpecificPreviewOk": "Zdekodowano - %s wartość(i) pochodzi z rekordu specyficznego dla producenta",
     "manufacturerSpecificReport": "%s",
     "manufacturerSpecificTelegramHelp": "Wklej tutaj telegram, aby zobaczyć, co zrobiłyby z nim opisy powyżej. Nic nie jest zapisywane i żaden stan nie jest tworzony - telegram jest tylko dekodowany.",
+    "manufacturerSpecificTelegramPlaceholder": "2C446532821851582C067AE1000000046D19...",
     "serialBaudRate": "Szeregowa prędkość transmisji",
     "serialPort": "Port szeregowy",
     "serialPortHelp": "Wybierz port lub wpisz go — aby urządzenie szeregowe było dostępne w sieci, użyj tcp://host:port",

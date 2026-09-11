@@ -38,6 +38,7 @@
     "manufacturerSpecificPreviewOk": "已解码——其中 %s 个数值来自制造商特定记录",
     "manufacturerSpecificReport": "%s",
     "manufacturerSpecificTelegramHelp": "在此粘贴一份电报，即可看到上面的描述会从中得出什么。不会保存任何内容，也不会写入任何状态——只做解码。",
+    "manufacturerSpecificTelegramPlaceholder": "2C446532821851582C067AE1000000046D19...",
     "serialBaudRate": "串口波特率",
     "serialPort": "串行端口",
     "serialPortHelp": "选择一个端口或键入 1 - 对于可通过网络访问的串行设备，请使用 tcp://host:port",
