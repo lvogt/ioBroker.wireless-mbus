@@ -38,7 +38,7 @@ jobs:
         # Node 20 is intentionally absent: package.json requires node >=22,
         # and the action sets engine-strict=true, so a node 20 job cannot
         # even install dependencies.
-        node-version: [22.x, 24.x]
+        node-version: [22.x, 24.x, 26.x]
         os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
