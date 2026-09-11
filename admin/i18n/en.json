@@ -25,6 +25,7 @@
     "manufacturerSpecificPreviewOk": "Decoded - %s value(s) came from a manufacturer specific record",
     "manufacturerSpecificReport": "%s",
     "manufacturerSpecificTelegramHelp": "Paste a telegram here to see what the descriptions above would make of it. Nothing is saved and no state is written - it is only decoded.",
+    "manufacturerSpecificTelegramPlaceholder": "2C446532821851582C067AE1000000046D19...",
     "Name": "Name",
     "Only handle devices that already have an object tree": "Only handle devices that already have an object tree",
     "Options": "Settings",

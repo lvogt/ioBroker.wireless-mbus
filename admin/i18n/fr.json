@@ -38,6 +38,7 @@
     "manufacturerSpecificPreviewOk": "Décodé - %s valeur(s) provenaient d’un enregistrement spécifique au fabricant",
     "manufacturerSpecificReport": "%s",
     "manufacturerSpecificTelegramHelp": "Collez ici un télégramme pour voir ce que les descriptions ci-dessus en feraient. Rien n'est enregistré et aucun état n'est écrit - il est seulement décodé.",
+    "manufacturerSpecificTelegramPlaceholder": "2C446532821851582C067AE1000000046D19...",
     "serialBaudRate": "Vitesse de transmission en série",
     "serialPort": "Port série",
     "serialPortHelp": "Sélectionnez un port ou saisissez-en un - pour un périphérique série accessible via le réseau, utilisez tcp://host:port",

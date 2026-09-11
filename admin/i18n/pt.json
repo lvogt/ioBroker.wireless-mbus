@@ -38,6 +38,7 @@
     "manufacturerSpecificPreviewOk": "Descodificado - %s valor(es) vieram de um registo específico do fabricante",
     "manufacturerSpecificReport": "%s",
     "manufacturerSpecificTelegramHelp": "Cole aqui um telegrama para ver o que as descrições acima fariam com ele. Nada é guardado e nenhum estado é escrito - é apenas descodificado.",
+    "manufacturerSpecificTelegramPlaceholder": "2C446532821851582C067AE1000000046D19...",
     "serialBaudRate": "Taxa de transmissão em série",
     "serialPort": "Porta serial",
     "serialPortHelp": "Selecione uma porta ou digite uma - para um dispositivo serial acessível pela rede, use tcp://host:port",

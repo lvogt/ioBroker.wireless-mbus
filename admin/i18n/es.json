@@ -38,6 +38,7 @@
     "manufacturerSpecificPreviewOk": "Decodificado: %s valor(es) provienen de un registro específico del fabricante",
     "manufacturerSpecificReport": "%s",
     "manufacturerSpecificTelegramHelp": "Pegue aquí un telegrama para ver qué harían con él las descripciones de arriba. No se guarda nada ni se escribe ningún estado: solo se decodifica.",
+    "manufacturerSpecificTelegramPlaceholder": "2C446532821851582C067AE1000000046D19...",
     "serialBaudRate": "Velocidad en baudios en serie",
     "serialPort": "Puerto serial",
     "serialPortHelp": "Seleccione un puerto o escriba uno; para un dispositivo serie accesible a través de la red, utilice tcp://host:port",

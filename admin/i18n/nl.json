@@ -38,6 +38,7 @@
     "manufacturerSpecificPreviewOk": "Gedecodeerd - %s waarde(n) kwamen uit een fabrikantspecifiek record",
     "manufacturerSpecificReport": "%s",
     "manufacturerSpecificTelegramHelp": "Plak hier een telegram om te zien wat de beschrijvingen hierboven ermee zouden doen. Er wordt niets opgeslagen en geen state geschreven - het wordt alleen gedecodeerd.",
+    "manufacturerSpecificTelegramPlaceholder": "2C446532821851582C067AE1000000046D19...",
     "serialBaudRate": "Seriële baudrate",
     "serialPort": "Seriële poort",
     "serialPortHelp": "Selecteer een poort of typ er een in - voor een serieel apparaat dat via het netwerk bereikbaar is, gebruikt u tcp://host:port",

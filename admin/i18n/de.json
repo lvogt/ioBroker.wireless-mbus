@@ -38,6 +38,7 @@
     "manufacturerSpecificPreviewOk": "Dekodiert - %s Wert(e) kamen aus einem herstellerspezifischen Datensatz",
     "manufacturerSpecificReport": "%s",
     "manufacturerSpecificTelegramHelp": "Hier ein Telegramm einfügen, um zu sehen, was die Beschreibungen oben daraus machen würden. Es wird nichts gespeichert und kein State geschrieben - es wird nur dekodiert.",
+    "manufacturerSpecificTelegramPlaceholder": "2C446532821851582C067AE1000000046D19...",
     "serialBaudRate": "Serielle Baudrate",
     "serialPort": "Serielle Schnittstelle",
     "serialPortHelp": "Wählen Sie einen Port aus oder geben Sie einen ein. Für ein serielles Gerät, das über das Netzwerk erreichbar ist, verwenden Sie tcp://host:port",
