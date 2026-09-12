@@ -182,6 +182,10 @@ battery life of a PRIOS meter is reported in months rather than in years.
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (ChL) Fix the "Simple Hexstring" receiver rejecting a telegram that carries its block CRCs without announcing them with a leading "Z": the parser is left to look for them rather than being told there are none, which made it read the first CRC byte as the CI field (#276)
+* (ChL) The "Simple Hexstring" receiver drops a line that is no telegram instead of turning it into one, takes a lower case "z" as the CRC marker as well, and reports the frame type of the configured mode again
+
 ### 0.13.0 (2026-09-09)
 * (ChL) Describe the manufacturer specific data records of a meter in the admin UI, the result become states of their own
 * (ChL) Update wireless-mbus-parser to 1.5.0: support for decoding manufacturer specific blobs - description for Itron smoke detector included.

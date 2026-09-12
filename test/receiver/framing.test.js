@@ -26,6 +26,8 @@ const telegram = '2C446532821851582C067AE1000000046D1906D9180C1334120000426CBF1C
  * @typedef {object} ReceivedTelegram
  * @property {Buffer} rawData the raw wM-Bus telegram
  * @property {number} rssi the signal strength the receiver reported
+ * @property {boolean} [containsCrc] whether the telegram carries its block CRCs
+ * @property {string} [frameType] the frame type the receiver was configured for
  */
 
 function createReceiver(ReceiverClass, mode) {
@@ -414,6 +416,56 @@ describe('SIMPLE framing', () => {
 
         expect(simple.messages).to.have.lengthOf(1);
         expect(simple.messages[0].rawData).to.eql(Buffer.from(telegram, 'hex'));
+    });
+
+    it('leaves it to the parser to find the CRCs of a line without a marker', () => {
+        const simple = createReceiver(SimpleReceiver, 'A');
+
+        // A sender that passes on what it picked up off the air writes the
+        // block CRCs without announcing them, so the absence of a marker
+        // cannot mean that there are none - the parser has to look (#276)
+        simple.receive(`${telegram}\n`);
+
+        expect(simple.messages[0].containsCrc).to.be.undefined;
+    });
+
+    it('takes a marker as the promise that the CRCs are there', () => {
+        const simple = createReceiver(SimpleReceiver, 'A');
+
+        simple.receive(`Z${telegram}\nz${telegram}\n`);
+
+        expect(simple.messages.map(message => message.containsCrc)).to.eql([true, true]);
+        simple.messages.forEach(message => expect(message.rawData).to.eql(Buffer.from(telegram, 'hex')));
+    });
+
+    it('drops a line that is no telegram', () => {
+        const simple = createReceiver(SimpleReceiver, 'A');
+
+        // taken as hex, a line like this becomes a few random bytes and a
+        // device that does not exist
+        simple.receive(`CC1101 ready\n${telegram}\n`);
+
+        expect(simple.messages).to.have.lengthOf(1);
+        expect(simple.debugged('Discarding line with invalid hex data'), 'dropping a line should leave a trace').to.be
+            .true;
+    });
+
+    it('drops a line that ends in half a byte', () => {
+        const simple = createReceiver(SimpleReceiver, 'A');
+
+        simple.receive(`${telegram.slice(0, -1)}\n`);
+
+        expect(simple.messages).to.be.empty;
+    });
+
+    it('reports the frame type of its mode', async () => {
+        const simple = createReceiver(SimpleReceiver, 'B');
+        // initDevice() used to write the mode into a property nobody reads
+        await simple.receiver.initDevice();
+
+        simple.receive(`${telegram}\n`);
+
+        expect(simple.messages[0].frameType).to.equal('B');
     });
 });
 

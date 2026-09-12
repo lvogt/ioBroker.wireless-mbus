@@ -352,7 +352,8 @@ describe('Test SIMPLE receiver', () => {
         const msg = await testTelegram('SimpleReceiver', 0xde);
 
         expect(msg).to.have.property('frameType', 'A');
-        expect(msg).to.have.property('containsCrc', false);
+        // no marker says nothing about the CRCs - see SIMPLE framing
+        expect(msg).to.have.property('containsCrc', undefined);
         expect(msg).to.have.deep.property('rawData', Buffer.from(telegram, 'hex'));
         expect(msg).to.have.property('rssi', -1);
         expect(msg).to.have.property('ts');

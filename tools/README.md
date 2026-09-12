@@ -38,7 +38,8 @@ it makes `npm run test:integration` fail with `EADDRINUSE`.
 ## Feeding telegrams through a serial port
 
 The "Simple Hexstring" receiver reads one telegram per line from a serial port, and `socat` can
-make a pair of them:
+make a pair of them. A line may start with a `Z` to say that the telegram carries its block CRCs;
+without it the parser looks for them itself, and a line that is no hex string at all is dropped:
 
 ```bash
 socat -d -d pty,raw,echo=0,link=/tmp/wmbus-port pty,raw,echo=0,link=/tmp/wmbus-feed &
