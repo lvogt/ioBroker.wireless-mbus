@@ -26,7 +26,8 @@ function stateId(record) {
  */
 async function parse(parser, hex, options = {}) {
     // containsCrc defaults to false rather than undefined: undefined makes the
-    // parser guess, while every receiver states it explicitly.
+    // parser guess, which is what a receiver asks for when it cannot know -
+    // the Simple Hexstring one, for a line that carries no marker (#276).
     const { key, containsCrc = false } = options;
     const parsed = await parser.parse(Buffer.from(hex, 'hex'), {
         verbose: true,
@@ -155,6 +156,30 @@ describe('Parser contract: state ids and values', () => {
 
         expect(result.deviceInformation.Manufacturer).to.equal('CEN');
         expect(Number(result.dataRecord[0].value)).to.be.closeTo(876.543, 0.01);
+    });
+
+    it('finds the CRCs of a telegram that nobody announced', async () => {
+        // Issue #276: a sender that passes on what it picked up off the air
+        // hands over the block CRCs without saying so. Told there are none,
+        // the parser reads the first CRC byte as the CI field; allowed to
+        // look for them, it strips them and gets to the encrypted payload.
+        const hydrus =
+            '5344a51106518687760737168c0094900f002c25d0b8150073b1fef21c214615928b7a55003107101af28340b188f159ab3c0' +
+            'f3e34beee680f638f81db244275ce796bc8cc8dd9888d4360eac03c6862dfa7366e59ee17b97dbd4a838ac23fd9';
+
+        /** @param {boolean | undefined} containsCrc */
+        const decode = async containsCrc => {
+            try {
+                await new WirelessMbusParser().parse(Buffer.from(hydrus, 'hex'), { verbose: true, containsCrc });
+                return null;
+            } catch (error) {
+                return error instanceof Error ? error.name : String(error);
+            }
+        };
+
+        expect(await decode(false), 'the first CRC byte was read as the CI field').to.equal('UNIMPLEMENTED_FEATURE');
+        expect(await decode(undefined), 'the CRCs should have been found').to.equal('NO_AES_KEY');
+        expect(await decode(true)).to.equal('NO_AES_KEY');
     });
 
     it('exposes numeric values, not preformatted strings', async () => {
