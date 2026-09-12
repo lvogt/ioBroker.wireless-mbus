@@ -68,7 +68,7 @@ async function initDevice(deviceClass, mode, port, timers) {
         opts.path = port;
     }
 
-    ReceiverClass = require(`../../lib/receiver/${deviceClass}`);
+    ReceiverClass = require(`../../src/lib/receiver/${deviceClass}`).default;
     receiver = new ReceiverClass(opts, mode, onMessage, console.log, showReceiverLogMessages ? logger : emptyLogger);
     await receiver.init();
 }
@@ -404,7 +404,7 @@ describe('Test CUL over TCP receiver', () => {
     });
 
     it('init T mode', async () => {
-        const CulReceiver = require('../../lib/receiver/CulReceiver');
+        const CulReceiver = require('../../src/lib/receiver/CulReceiver').default;
         receiver = new CulReceiver(
             { isTcp: true, host: '127.0.0.1', port: 5005 },
             'T',
@@ -423,7 +423,7 @@ describe('Test CUL over TCP receiver', () => {
     });
 
     it('does not reconnect after the connection was closed on purpose', async () => {
-        const CulReceiver = require('../../lib/receiver/CulReceiver');
+        const CulReceiver = require('../../src/lib/receiver/CulReceiver').default;
         receiver = new CulReceiver(
             { isTcp: true, host: '127.0.0.1', port: 5005 },
             'T',

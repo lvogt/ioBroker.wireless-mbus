@@ -2,14 +2,15 @@
 
 const { expect } = require('chai');
 const { VifTable } = require('wireless-mbus-parser');
-const DeviceRegistry = require('../lib/DeviceRegistry');
-const { MAX_LAYOUTS_PER_DEVICE } = DeviceRegistry;
+const DeviceRegistry = require('../src/lib/DeviceRegistry').default;
+// now a named export rather than a property of the class
+const { MAX_LAYOUTS_PER_DEVICE } = require('../src/lib/DeviceRegistry');
 
 /**
  * A record layout as the parser hands it out - only the crc matters here.
  *
- * @param {number} crc
- * @returns {import('wireless-mbus-parser').DataRecordHeadersCacheEntry} a layout with that signature
+ * @param crc
+ * @returns a layout with that signature
  */
 function layout(crc) {
     return {

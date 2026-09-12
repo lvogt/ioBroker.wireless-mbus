@@ -1,0 +1,14 @@
+// Compilation config: emits build/ from src/ and nothing else.
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "allowJs": false,
+        "checkJs": false,
+        "noEmit": false,
+        "declaration": false,
+        "rootDir": "./src",
+        "outDir": "./build"
+    },
+    "include": ["src/**/*.ts", "src/**/*.d.ts"],
+    "exclude": ["node_modules/**", "build/**", "src/**/*.test.ts"]
+}

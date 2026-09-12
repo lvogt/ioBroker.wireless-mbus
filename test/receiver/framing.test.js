@@ -2,15 +2,15 @@
 
 const { expect } = require('chai');
 const net = require('node:net');
-const AmberMessage = require('../../lib/receiver/AmberMessage');
-const AmberReceiver = require('../../lib/receiver/AmberReceiver');
-const CulReceiver = require('../../lib/receiver/CulReceiver');
-const EbiMessage = require('../../lib/receiver/EbiMessage');
-const EbiReceiver = require('../../lib/receiver/EbiReceiver');
-const HciMessage = require('../../lib/receiver/HciMessage');
-const ImstReceiver = require('../../lib/receiver/ImstReceiver');
-const SimpleReceiver = require('../../lib/receiver/SimpleReceiver');
-const TcpReceiver = require('../../lib/receiver/TcpReceiver');
+const AmberMessage = require('../../src/lib/receiver/AmberMessage').default;
+const AmberReceiver = require('../../src/lib/receiver/AmberReceiver').default;
+const CulReceiver = require('../../src/lib/receiver/CulReceiver').default;
+const EbiMessage = require('../../src/lib/receiver/EbiMessage').default;
+const EbiReceiver = require('../../src/lib/receiver/EbiReceiver').default;
+const HciMessage = require('../../src/lib/receiver/HciMessage').default;
+const ImstReceiver = require('../../src/lib/receiver/ImstReceiver').default;
+const SimpleReceiver = require('../../src/lib/receiver/SimpleReceiver').default;
+const TcpReceiver = require('../../src/lib/receiver/TcpReceiver').default;
 
 /*
  * Framing tests for the receivers other than IMSTv2 (see imstv2-framing.test.js

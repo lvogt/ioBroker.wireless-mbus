@@ -30,19 +30,14 @@
     "wireless-mbus-parser": "^1.5.0"
   },
   "files": [
+    "build/",
     "io-package.json",
     "README.md",
     "LICENSE",
     "NOTICE",
-    "main.js",
     "admin/wireless-mbus.png",
     "admin/jsonConfig.json",
-    "admin/i18n/",
-    "lib/receiver/*.js",
-    "lib/SimpleLogger.js",
-    "lib/ObjectHelper.js",
-    "lib/DeviceRegistry.js",
-    "lib/ManufacturerSpecific.js"
+    "admin/i18n/"
   ],
   "devDependencies": {
     "@alcalzone/release-script": "^5.2.1",
@@ -56,16 +51,24 @@
     "@iobroker/types": "^7.2.2",
     "@serialport/binding-mock": "^10.2.2",
     "@serialport/stream": "^13.0.0",
+    "@tsconfig/node22": "^22.0.6",
     "@types/node": "^22.20.1",
+    "@types/source-map-support": "^0.5.10",
+    "rimraf": "^6.1.3",
+    "source-map-support": "^0.5.21",
+    "ts-node": "^10.9.2",
     "typescript": "~6.0.3"
   },
-  "main": "main.js",
+  "main": "build/main.js",
   "scripts": {
-    "test:unit": "mocha --config test/mocharc.custom.json \"{lib/**/*.test.js,test/**/*.test.js,*.test.js}\"",
+    "prebuild": "rimraf build",
+    "build": "build-adapter ts",
+    "watch": "build-adapter ts --watch",
+    "test:unit": "mocha --config test/mocharc.custom.json \"{src/**/*.test.ts,test/**/*.test.ts,test/**/*.test.js}\"",
     "test:package": "mocha test/package --exit",
     "test:integration": "mocha test/integration --exit",
     "test": "npm run test:unit && npm run test:package",
-    "check": "tsc --noEmit -p tsconfig.check.json",
+    "check": "tsc --noEmit",
     "lint": "eslint -c eslint.config.mjs .",
     "translate": "translate-adapter",
     "release": "release-script"

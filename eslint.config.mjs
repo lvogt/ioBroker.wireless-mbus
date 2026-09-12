@@ -32,6 +32,15 @@ export default [
             // breaks `npm run check` silently. Re-enable once the sources are
             // really TypeScript.
             'jsdoc/check-tag-names': 'off',
+
+            // The conversion to TypeScript declares types module by module.
+            // Until that is finished these stay warnings so the remaining work
+            // is visible without blocking the build; set them back to 'error'
+            // once the sources carry their own return types.
+            '@typescript-eslint/explicit-function-return-type': 'warn',
+            '@typescript-eslint/explicit-module-boundary-types': 'warn',
+            // the JSDoc @param types left over from the JavaScript sources
+            'jsdoc/no-types': 'warn',
         },
     },
     {
@@ -40,7 +49,7 @@ export default [
         // ones document the protocol and belong next to the ones that are -
         // so allow unused module-level constants here, while still catching
         // unused locals and parameters.
-        files: ['lib/receiver/*.js'],
+        files: ['src/lib/receiver/*.ts'],
         rules: {
             '@typescript-eslint/no-unused-vars': [
                 'error',
@@ -57,7 +66,7 @@ export default [
         // declares node globals, so mocha's describe/it/before/after need
         // adding, and the mocks deliberately keep unused protocol constants
         // and unused callback parameters to mirror the real interfaces.
-        files: ['**/*.test.js', 'test/**/*.js'],
+        files: ['**/*.test.js', '**/*.test.ts', 'test/**/*.js', 'test/**/*.ts'],
         languageOptions: {
             globals: {
                 ...globals.mocha,
