@@ -20,9 +20,9 @@ function stateId(record) {
 }
 
 /**
- * @param {InstanceType<typeof WirelessMbusParser>} parser
- * @param {string} hex
- * @param {{ key?: string, containsCrc?: boolean }} [options]
+ * @param parser
+ * @param hex
+ * @param [options]
  */
 async function parse(parser, hex, options = {}) {
     // containsCrc defaults to false rather than undefined: undefined makes the
@@ -41,9 +41,9 @@ async function parse(parser, hex, options = {}) {
  * Returns the name of the thrown ParserError, or null if parsing succeeded.
  * ParserError is a type-only export, so the name is the only discriminator.
  *
- * @param {InstanceType<typeof WirelessMbusParser>} parser
- * @param {string} hex
- * @param {{ key?: string, containsCrc?: boolean }} [options]
+ * @param parser
+ * @param hex
+ * @param [options]
  */
 async function parseErrorName(parser, hex, options = {}) {
     try {
@@ -167,7 +167,7 @@ describe('Parser contract: state ids and values', () => {
             '5344a51106518687760737168c0094900f002c25d0b8150073b1fef21c214615928b7a55003107101af28340b188f159ab3c0' +
             'f3e34beee680f638f81db244275ce796bc8cc8dd9888d4360eac03c6862dfa7366e59ee17b97dbd4a838ac23fd9';
 
-        /** @param {boolean | undefined} containsCrc */
+        /** @param containsCrc */
         const decode = async containsCrc => {
             try {
                 await new WirelessMbusParser().parse(Buffer.from(hydrus, 'hex'), { verbose: true, containsCrc });

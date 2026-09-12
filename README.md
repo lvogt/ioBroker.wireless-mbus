@@ -183,6 +183,7 @@ battery life of a PRIOS meter is reported in months rather than in years.
     ### **WORK IN PROGRESS**
 -->
 ### **WORK IN PROGRESS**
+* (ChL) Convert the adapter to TypeScript
 * (ChL) Fix the "Simple Hexstring" receiver rejecting a telegram that carries its block CRCs without announcing them with a leading "Z": the parser is left to look for them rather than being told there are none, which made it read the first CRC byte as the CI field (#276)
 * (ChL) The "Simple Hexstring" receiver drops a line that is no telegram instead of turning it into one, takes a lower case "z" as the CRC marker as well, and reports the frame type of the configured mode again
 

@@ -1,0 +1,405 @@
+'use strict';
+
+import SerialDevice from './SerialDevice';
+import EbiMessage from './EbiMessage';
+
+const DEVICE_INFORMATION_PROTOCOL = {
+    0x00: 'Unknown',
+    0x01: 'Proprietary',
+    0x10: '802.15.4',
+    0x20: 'ZigBee',
+    0x21: 'ZigBee 2004 (1.0)',
+    0x22: 'ZigBee 2006',
+    0x23: 'ZigBee 2007',
+    0x24: 'ZigBee 2007-Pro',
+    0x40: 'Wireless M-Bus',
+};
+
+const DEVICE_INFORMATION_MODULE = {
+    0x00: 'Unknown',
+    0x10: 'Reserved',
+    0x20: 'EMB-ZRF2xx',
+    0x24: 'EMB-ZRF231xx',
+    0x26: 'EMB-ZRF231PA',
+    0x28: 'EMB-ZRF212xx',
+    0x29: 'EMB-ZRF212B',
+    0x30: 'EMB-Z253x',
+    0x34: 'EMB-Z2530x',
+    0x36: 'EMB-Z2530PA',
+    0x38: 'EMB-Z2531x',
+    0x3a: 'EMB-Z2531PA-USB',
+    0x3c: 'EMB-Z2538x',
+    0x3d: 'EMB-Z2538PA',
+    0x40: 'EMB-WMBx',
+    0x44: 'EMB-WMB169x',
+    0x45: 'EMB-WMB169T',
+    0x46: 'EMB-WMB169PA',
+    0x48: 'EMB-WMB868x',
+    0x49: 'EMB-WMB868',
+};
+
+const JOINING_NETWORK_PREFERENCE = {
+    JOINING_NETWORK_NOT_PERMITTED: 0x00,
+    JOINING_NETWORK_PERMITTED: 0x01,
+};
+
+const SCAN_MODE = {
+    SCAN_MODE_ENERGY: 0x00,
+    SCAN_MODE_PASSIVE: 0x01,
+    SCAN_MODE_ACTIVE: 0x02,
+};
+
+const EXECUTION_STATUS_BYTE_VALUE = {
+    0x00: 'Success',
+    0x01: 'Generic error',
+    0x02: 'Parameters not accepted',
+    0x03: 'Operation timeout',
+    0x04: 'No memory',
+    0x05: 'Unsupported',
+    0x06: 'Busy',
+    0x07: 'Duty Cycle',
+};
+
+const CHANNELS_WMB = {
+    1: 0x01, // 169.40625[MHz] @4.8[kbps]
+    2: 0x02, // 169,41875[MHz] @4.8[kbps]
+    3: 0x03, // 169,43125[MHz] @2.4[kbps]
+    4: 0x04, // 169,44375[MHz] @2.4[kbps]
+    5: 0x05, // 169,45625[MHz] @4.8[kbps]
+    6: 0x06, // 169,46875[MHz] @4.8[kbps]
+    7: 0x07, // 169,43750[MHz] @19.2[kbps]
+    13: 0x0d, // 868.030[MHz] @4.8[kbps]
+    14: 0x0e, // 868,090[MHz] @4.8[kbps]
+    15: 0x0f, // 868,150[MHz] @4.8[kbps]
+    16: 0x10, // 868.210[MHz] @4.8[kbps]
+    17: 0x11, // 868.270[MHz] @4.8[kbps]
+    18: 0x12, // 868.330[MHz] @4.8[kbps]
+    19: 0x13, // 868.390[MHz] @4.8[kbps]
+    20: 0x14, // 868.450[MHz] @4.8[kbps]
+    21: 0x15, // 868.510[MHz] @4.8[kbps]
+    22: 0x16, // 868.570[MHz] @4.8[kbps]
+    23: 0x17, // 868,300[MHz] @16,384[kbps]
+    24: 0x18, // 868,300[MHz] @16,384[kbps]
+    25: 0x19, // 868,950[MHz] @66.666[kbps]
+    26: 0x1a, // 868.300[MHz] @16.384[kbps]
+    27: 0x1b, // 868.030[MHz] @2.4[kbps]
+    28: 0x1c, // 868.090[MHz] @2.4[kbps]
+    29: 0x1d, // 868.150[MHz] @2.4[kbps]
+    30: 0x1e, // 868.210[MHz] @2.4[kbps]
+    31: 0x1f, // 868.270[MHz] @2.4[kbps]
+    32: 0x20, // 868.330[MHz] @2.4[kbps]
+    33: 0x21, // 868.390[MHz] @2.4[kbps]
+    34: 0x22, // 868.450[MHz] @2.4[kbps]
+    35: 0x23, // 868.510[MHz] @2.4[kbps]
+    36: 0x24, // 868.570[MHz] @2.4[kbps]
+    37: 0x25, // 868.950[MHz] @100[kbps]
+    38: 0x26, // 869,525[MHz] @50[kbps]
+};
+
+// Protocol and general device parameters
+// Everything the module sends has the high bit of the message id set: a
+// response repeats the id of its command with that bit added, and so do the
+// notifications and the message that reports a telegram
+const MODULE_MESSAGE_FLAG = 0x80;
+const MSG_RECEIVED_DATA = 0xe0;
+
+// Message id, length and checksum - the shortest message there can be
+const MIN_MESSAGE_LENGTH = 4;
+
+// How long to wait for the rest of the message that was already being sent
+// when the port was opened, before dropping it (msec)
+const STALE_DATA_TIMEOUT = 100;
+
+const CMD_DEVICE_INFORMATION = 0x01;
+const CMD_DEVICE_STATE = 0x04;
+const CMD_RESET = 0x05;
+const CMD_FIRMWARE_VERSION = 0x06;
+const CMD_RESTORE_SETTINGS = 0x07;
+const CMD_SAVE_SETTINGS = 0x08;
+const CMD_UART_CONFIG = 0x09;
+
+const CMD_OUTPUT_POWER = 0x10;
+const CMD_OPERATING_CHANNEL = 0x11;
+const CMD_ENERGY_SAVE = 0x13;
+
+const CMD_NETWORK_AUTOMATED_SETTINGS = 0x24;
+
+const CMD_NETWORK_START = 0x31;
+
+// Bootloader commands
+const CMD_BOOTLOADER_ENTER = 0x70;
+const CMD_BOOTLOADER_SETOPTIONS = 0x71;
+const CMD_BOOTLOADER_ERASEMEMORY = 0x78;
+const CMD_BOOTLOADER_WRITE = 0x7a;
+const CMD_BOOTLOADER_READ = 0x7b;
+const CMD_BOOTLOADER_COMMIT = 0x7f;
+
+const RX_POLICY_ALLWAYS_ON_WMB = 0x00;
+const RX_POLICY_ALLWAYS_OFF_WMB = 0x01;
+// Receive window after transmission (whose duration is defined by WMBUS
+// standard [3]); a notification (received data notification 0xE0) is
+// generated if a packet is received during this receive window.
+const RX_POLICY_RECEIVED_WINDOW_WMB = 0x02;
+// Receive window after transmission (whose duration is defined by WMBUS
+// standard [3]); a notification will be generated if a packet is received
+// (just like mode 0x02); however, even if no packet is received, a
+// notification (device state notification, 0x84, with code 0x51) is
+// generated to indicate the end of the receiving window.
+const RX_POLICY_RECEIVED_WITH_END_WINDOW_WMB = 0x03;
+
+const MCU_POLICY_ALLWAYS_ON_WMB = 0x00;
+const MCU_POLICY_ALLWAYS_OFF_WMB = 0x01;
+
+const NETWORK_ROLE_WMB = {
+    NETWORK_ROLE_METER: 0x00,
+    NETWORK_ROLE_OTHER_DEVICE: 0x01,
+};
+
+class EbiReceiver extends SerialDevice {
+    constructor(options, mode, onMessage, onError, loggerFunction) {
+        super(options, mode, onMessage, onError, loggerFunction);
+
+        this.log.setPrefix('EBI');
+
+        // The module keeps the network it was told to start, so it is usually
+        // in the middle of a message when the port is opened - and its
+        // protocol has nothing to synchronise on but a length and a checksum.
+        this.staleDataTimeout = STALE_DATA_TIMEOUT;
+    }
+
+    buildPayloadPackage(command, payload) {
+        return new EbiMessage().setPayload(command, payload).build();
+    }
+
+    checkAndExtractMessage() {
+        return this.extractMessageByLength(
+            // The protocol has nothing to synchronise on: no start marker, just
+            // a length, a message id, the payload and a one byte checksum
+            null,
+            candidate => this.getMessageLength(candidate),
+            messageBuffer => this.isMessageIntact(messageBuffer),
+        );
+    }
+
+    getMessageLength(candidate) {
+        const length = EbiMessage.tryToGetLength(candidate);
+
+        if (length !== -1 && (length < MIN_MESSAGE_LENGTH || length > this.maxParserBufferLength)) {
+            // No message can be that short, and one longer than the buffer
+            // could never be assembled either
+            return 0;
+        }
+
+        return length;
+    }
+
+    /**
+     * Whether a message could be one the module sent. The checksum is a single
+     * byte, so it alone would accept one in 256 of the slices that a
+     * resynchronisation tries out.
+     */
+    isMessageIntact(messageBuffer) {
+        const message = new EbiMessage();
+
+        if (message.parse(messageBuffer) !== true) {
+            return false;
+        }
+
+        return (message.messageId & MODULE_MESSAGE_FLAG) !== 0;
+    }
+
+    /**
+     * Without this a telegram that arrives between a command and its response
+     * is taken for the response and fails the command.
+     */
+    isTelegramMessage(messageBuffer) {
+        const message = new EbiMessage();
+        message.parse(messageBuffer);
+        return message.messageId === MSG_RECEIVED_DATA;
+    }
+
+    validateResponse(pkg, response) {
+        const mPkg = new EbiMessage();
+        mPkg.parse(pkg);
+
+        const mResponse = new EbiMessage();
+        mResponse.parse(response);
+
+        if (mPkg.payload.length) {
+            if (mResponse.payload[0] != 0x00) {
+                throw new Error(
+                    `Package validation failed! Execution status: ${EXECUTION_STATUS_BYTE_VALUE[mResponse.payload[0]]}`,
+                );
+            }
+        }
+
+        if (mPkg.setupResponse().messageId != mResponse.messageId) {
+            throw new Error('MessageId mismatch!');
+        }
+    }
+
+    parseRawMessage(messageBuffer) {
+        const ebiMessage = new EbiMessage();
+        const parseResult = ebiMessage.parse(messageBuffer);
+        if (parseResult !== true) {
+            this.log.debug(parseResult);
+        }
+
+        const options = ebiMessage.payload.readUInt16BE(0);
+        const frameType = this.getFrameType(options);
+        const rssi = this.getRssi(options, ebiMessage.payload);
+        const ts = this.getTimestamp(options, ebiMessage.payload);
+        const rawData = this.stripHeader(options, ebiMessage.payload);
+
+        return {
+            frameType: frameType,
+            containsCrc: false,
+            rawData: rawData,
+            rssi: rssi,
+            ts: ts,
+        };
+    }
+
+    getRssi(options, payload) {
+        if (options & 0x8000) {
+            return payload.readInt8(2);
+        }
+        return -1;
+    }
+
+    getFrameType(options) {
+        if (options & 0x0010) {
+            return 'B';
+        }
+        return 'A';
+    }
+
+    getTimestamp(options, payload) {
+        if (options & 0x0008) {
+            // timestamp since power on
+            const pos = 2 + (options & 0x8000 ? 1 : 0);
+            return payload.readUInt32BE(pos) / 32768;
+        }
+        return new Date().getTime();
+    }
+
+    stripHeader(options, payload) {
+        const start = 2 + (options & 0x8000 ? 1 : 0) + (options & 0x0008 ? 4 : 0);
+        return payload.subarray(start);
+    }
+
+    async reset() {
+        await this.sendPackage(CMD_RESET, Buffer.alloc(0));
+        const response = await this.readResponse();
+        const m = new EbiMessage();
+        m.parse(response);
+
+        if (m.payload[0] != 0x10) {
+            // Not fatal: the settings that follow are simply not saved
+            this.log.warn(`Device not ready! ${m.payload.toString('hex')}`);
+            return false;
+        }
+        this.log.debug('Device ready');
+        return true;
+    }
+
+    async getDeviceInformation() {
+        const response = await this.sendPackage(CMD_DEVICE_INFORMATION, Buffer.alloc(0));
+        const m = new EbiMessage();
+        m.parse(response);
+
+        this.log.debug(
+            `Found ${DEVICE_INFORMATION_PROTOCOL[m.payload[0]]} protocol and module ${DEVICE_INFORMATION_MODULE[m.payload[1]]}`,
+        );
+        return m.payload;
+    }
+
+    async setOutputPower(power) {
+        let payload;
+        if (power >= 0) {
+            payload = Buffer.from([power & 0xff]);
+        } else {
+            payload = Buffer.from([-power & 0x80]);
+        }
+
+        await this.sendPackage(CMD_OUTPUT_POWER, payload);
+    }
+
+    async setOperatingChannel(channel) {
+        await this.sendPackage(CMD_OPERATING_CHANNEL, Buffer.from([CHANNELS_WMB[channel]]));
+    }
+
+    async setEnergySave(rxPolicy, mcuPolicy) {
+        await this.sendPackage(CMD_ENERGY_SAVE, Buffer.from([rxPolicy, mcuPolicy]));
+    }
+
+    async setNetworkAutomatedSettings() {
+        await this.sendPackage(CMD_NETWORK_AUTOMATED_SETTINGS, Buffer.from([0x80, 0x00]));
+    }
+
+    async saveSettings() {
+        await this.sendPackage(CMD_SAVE_SETTINGS, Buffer.alloc(0));
+    }
+
+    async networkStart() {
+        await this.sendPackage(CMD_NETWORK_START, Buffer.alloc(0));
+    }
+
+    getMode() {
+        switch (this.mode) {
+            case 'T':
+                return 0x19;
+            case 'S':
+                return 0x18;
+            case 'C':
+                return 0x25;
+            default:
+                return 0x19;
+        }
+    }
+
+    getModeDescription() {
+        switch (this.mode) {
+            case 'T':
+                return 'T-Mode 868.950[MHz] @66.666[kbps]';
+            case 'S':
+                return 'S-Mode 868.300[MHz] @16.384[kbps]';
+            case 'C':
+                return 'C-Mode 868.950[MHz] @100[kbps]';
+            default:
+                return 'T-Mode 868.950[MHz] @66.666[kbps]';
+        }
+    }
+
+    async initDevice() {
+        const deviceInfo = await this.getDeviceInformation();
+        if (!(deviceInfo[0] & 0x40)) {
+            throw new Error('This is not an Embit Wireless M-Bus device!');
+        }
+
+        // do a reset for a cleaner state
+        const deviceReady = await this.reset();
+
+        // set channel, power, energy saving
+        await this.setOutputPower(0x0f);
+        this.log.debug('Power set to max');
+
+        await this.setOperatingChannel(this.getMode());
+        this.log.info(`Receiver set to ${this.getModeDescription()}`);
+
+        await this.setEnergySave(RX_POLICY_ALLWAYS_ON_WMB, MCU_POLICY_ALLWAYS_ON_WMB);
+        this.log.debug('Energy saving disabled');
+
+        if (deviceReady) {
+            await this.setNetworkAutomatedSettings();
+            this.log.debug('Automatically start network');
+            await this.saveSettings();
+            this.log.debug('Settings saved');
+        }
+
+        await this.networkStart();
+        this.log.debug('Network start okay!');
+    }
+}
+
+export default EbiReceiver;

@@ -1,47 +1,39 @@
-// Root tsconfig to set the settings and power editor support for all TS files
+// Root tsconfig: type checking for everything, no emit.
+// The compilation itself is configured in tsconfig.build.json.
 {
-    "compileOnSave": true,
+    "extends": "@tsconfig/node22/tsconfig.json",
     "compilerOptions": {
-        // do not compile anything, this file is just to configure type checking
         "noEmit": true,
 
-        // check JS files
+        // the test helpers and the admin config are still JavaScript
         "allowJs": true,
         "checkJs": true,
 
-        "module": "commonjs",
-        "moduleResolution": "node",
-        "esModuleInterop": true,
-        // this is necessary for the automatic typing of the adapter config
+        // necessary for the automatic typing of the adapter config
         "resolveJsonModule": true,
-        // dependency .d.ts files are not ours to fix; several ship types that
-        // do not resolve under moduleResolution "node"
+
+        // dependency .d.ts files are not ours to fix
         "skipLibCheck": true,
 
-        // Global type packages have to be listed explicitly - they are not
-        // reachable through an import, so nothing pulls them in on its own.
-        // "mocha" provides describe/it/before/after for the test files;
-        // @types/mocha comes in with @iobroker/testing.
+        // Global type packages are not reachable through an import, so they
+        // have to be listed: "mocha" provides describe/it for the tests.
         "types": ["node", "mocha"],
 
-        // Set this to false if you want to disable the very strict rules (not recommended)
-        "strict": true,
-        // Or enable some of those features for more fine-grained control
-        // "strictNullChecks": true,
-        // "strictPropertyInitialization": true,
-        // "strictBindCallApply": true,
+        // esbuild transpiles one file at a time, which quietly breaks the
+        // TypeScript constructs that need cross-file information - const enums
+        // and merged namespaces above all. This rejects every construct that
+        // cannot simply be erased, so what is written always survives the
+        // build. It is also what would be needed to run the sources directly
+        // under node's type stripping.
+        "erasableSyntaxOnly": true,
+
+        // relaxed while the sources are being converted; tighten per module
         "noImplicitAny": false,
-        // "noUnusedLocals": true,
-        // "noUnusedParameters": true,
+        "useUnknownInCatchVariables": false,
 
-        "target": "es2022",
-
+        "sourceMap": true,
+        "inlineSourceMap": false
     },
-    "include": [
-        "**/*.js",
-        "**/*.d.ts"
-    ],
-    "exclude": [
-        "node_modules/**"
-    ]
+    "include": ["src/**/*.ts", "src/**/*.d.ts", "test/**/*.ts", "test/**/*.js", "*.mjs"],
+    "exclude": ["node_modules/**", "build/**", ".dev-server/**", "admin/words.js"]
 }

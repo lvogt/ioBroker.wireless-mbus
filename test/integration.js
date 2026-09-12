@@ -21,10 +21,13 @@ function copyMocks(harness) {
             return;
         }
 
-        fs.writeFileSync(
-            `${harness.testAdapterDir}/test/receiver/${file.name}`,
-            fs.readFileSync(`${harness.adapterDir}/test/receiver/${file.name}`),
-        );
+        // The mocks import the sources; the published package only carries
+        // the build output, so point them at that.
+        const source = fs
+            .readFileSync(`${harness.adapterDir}/test/receiver/${file.name}`, 'utf-8')
+            .replace(/(\.\.\/)+src\/lib\//g, '../../build/lib/');
+
+        fs.writeFileSync(`${harness.testAdapterDir}/test/receiver/${file.name}`, source);
     });
 }
 
@@ -70,10 +73,19 @@ async function dataRecordHeadersOf(telegram) {
 async function prepareAdapterWithMock(harness, mockType, forceFail) {
     try {
         await harness.objects.getObject('system.adapter.wireless-mbus.0', async (err, obj) => {
-            const classFile = fs.readFileSync(`${harness.testAdapterDir}/lib/receiver/SerialDevice.js`, 'utf-8');
-            // relative to lib/receiver/SerialDevice.js, where the require lives
-            const patchedClass = classFile.replace("'serialport'", `'../../test/receiver/${mockType}DeviceMock'`);
-            fs.writeFileSync(`${harness.testAdapterDir}/lib/receiver/SerialDevice.js`, patchedClass);
+            const classFile = fs.readFileSync(`${harness.testAdapterDir}/build/lib/receiver/SerialDevice.js`, 'utf-8');
+            // The built file requires "serialport" with double quotes, where
+            // the source had single ones. Relative to
+            // build/lib/receiver/SerialDevice.js, the mocks copied into the
+            // adapter root are three levels up.
+            const patchedClass = classFile.replace(
+                /require\((["'])serialport\1\)/,
+                `require('../../../test/receiver/${mockType}DeviceMock')`,
+            );
+            if (patchedClass === classFile) {
+                throw new Error('Could not inject the device mock - the serialport require was not found');
+            }
+            fs.writeFileSync(`${harness.testAdapterDir}/build/lib/receiver/SerialDevice.js`, patchedClass);
 
             if (forceFail) {
                 if (mockType === 'Cul') {

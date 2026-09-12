@@ -1,7 +1,7 @@
 'use strict';
 
 const { expect } = require('chai');
-const { listReceivers, getReceiver } = require('../lib/receiver');
+const { listReceivers, getReceiver } = require('../src/lib/receiver');
 
 describe('Receiver registry', () => {
     it('offers exactly the receivers the admin UI expects', () => {

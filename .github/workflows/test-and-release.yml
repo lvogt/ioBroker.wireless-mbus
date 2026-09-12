@@ -24,6 +24,7 @@ jobs:
     steps:
       - uses: ioBroker/testing-action-check@v2
         with:
+          build: true
           node-version: "22.x"
           type-checking: true
           lint: true
@@ -44,6 +45,7 @@ jobs:
     steps:
       - uses: ioBroker/testing-action-adapter@v1
         with:
+          build: true
           node-version: ${{ matrix.node-version }}
           os: ${{ matrix.os }}
 
@@ -65,5 +67,6 @@ jobs:
     steps:
       - uses: ioBroker/testing-action-deploy@v1
         with:
+          build: true
           node-version: "24.x"
           github-token: ${{ secrets.GITHUB_TOKEN }}

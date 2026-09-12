@@ -1,8 +1,8 @@
 'use strict';
 
 const { expect } = require('chai');
-const HciMessageV2 = require('../../lib/receiver/HciMessageV2');
-const ImstV2Receiver = require('../../lib/receiver/ImstV2Receiver');
+const HciMessageV2 = require('../../src/lib/receiver/HciMessageV2').default;
+const ImstV2Receiver = require('../../src/lib/receiver/ImstV2Receiver').default;
 
 /*
  * Regression tests for the SLIP framing of the IMST iU891A-XL receiver.
@@ -170,7 +170,7 @@ describe('IMSTv2 SLIP framing', () => {
         receiver.readTimeout = 5000;
         const nextCommand = receiver.readResponse();
 
-        expect(await expectRejection(timingOut)).to.equal('Timeout waiting for response');
+        expect(String(await expectRejection(timingOut))).to.contain('Timeout waiting for response');
         expect(receiver.readPromises, 'the reader of the next command was removed as well').to.have.lengthOf(1);
 
         // ... so the next command still gets its response

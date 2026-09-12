@@ -2,7 +2,7 @@
 
 const { expect } = require('chai');
 const { WirelessMbusParser } = require('wireless-mbus-parser');
-const { buildHandlers, readDescriptions, EXAMPLE_DESCRIPTION } = require('../lib/ManufacturerSpecific');
+const { buildHandlers, readDescriptions, EXAMPLE_DESCRIPTION } = require('../src/lib/ManufacturerSpecific');
 
 /*
  * The descriptions of manufacturer specific data records come from the admin
@@ -119,7 +119,7 @@ describe('Manufacturer specific descriptions: what the parser makes of them', ()
         '0f0000010100000101000001012927283418311b39000001010000010100000000' +
         '14310f370d00460100002f';
 
-    /** @param {Record<string, unknown>} descriptions */
+    /** @param descriptions */
     async function decode(descriptions) {
         const { handlers } = buildHandlers(descriptions);
         const parsed = await new WirelessMbusParser({ manufacturerSpecificHandlers: handlers }).parse(
