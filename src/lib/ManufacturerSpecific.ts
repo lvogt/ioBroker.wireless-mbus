@@ -12,6 +12,14 @@ export interface Report {
     error: boolean;
 }
 
+/** What readDescriptions() made of what is configured. */
+export interface Descriptions {
+    /** one description per manufacturer, empty if there is nothing to read */
+    descriptions: Record<string, unknown>;
+    /** why the configuration could not be read at all */
+    error?: string;
+}
+
 export interface Result {
     handlers: Record<string, Handler>;
     reports: Report[];
@@ -45,7 +53,7 @@ const MANUFACTURER_PATTERN = /^[A-Z]{3}$/;
  * @param configured
  * @returns the error if it is none
  */
-function readDescriptions(configured) {
+function readDescriptions(configured: unknown): Descriptions {
     if (configured === undefined || configured === null || configured === '') {
         return { descriptions: {} };
     }
@@ -62,7 +70,7 @@ function readDescriptions(configured) {
         return { descriptions: {}, error: 'expected one description per manufacturer, e.g. { "ITW": [ ... ] }' };
     }
 
-    return { descriptions: /** @type {Record<string, unknown>} */ configured };
+    return { descriptions: configured as Record<string, unknown> };
 }
 
 /**
@@ -72,12 +80,12 @@ function readDescriptions(configured) {
  * @param spec
  * @returns what it holds, in one line
  */
-function summarize(spec) {
+function summarize(spec: unknown[]): string {
     let layouts = 0;
     let fields = 0;
 
     for (const entry of spec) {
-        const layout = /** @type {{ fields?: unknown[] }} */ entry;
+        const layout = entry as { fields?: unknown[] };
         if (layout && Array.isArray(layout.fields)) {
             layouts++;
             fields += layout.fields.length;
@@ -93,7 +101,7 @@ function summarize(spec) {
  * @param configured the descriptions as configured
  * @returns the handlers, and one report per description
  */
-function buildHandlers(configured) {
+function buildHandlers(configured: unknown): Result {
     const { descriptions, error } = readDescriptions(configured);
 
     if (error) {

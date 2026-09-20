@@ -9,8 +9,8 @@ const { MAX_LAYOUTS_PER_DEVICE } = require('../src/lib/DeviceRegistry');
 /**
  * A record layout as the parser hands it out - only the crc matters here.
  *
- * @param crc
- * @returns a layout with that signature
+ * @param {number} crc
+ * @returns {import('wireless-mbus-parser').DataRecordHeadersCacheEntry} a layout with that signature
  */
 function layout(crc) {
     return {

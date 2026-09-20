@@ -33,12 +33,11 @@ export default [
             // really TypeScript.
             'jsdoc/check-tag-names': 'off',
 
-            // The conversion to TypeScript declares types module by module.
-            // Until that is finished these stay warnings so the remaining work
-            // is visible without blocking the build; set them back to 'error'
-            // once the sources carry their own return types.
-            '@typescript-eslint/explicit-function-return-type': 'warn',
-            '@typescript-eslint/explicit-module-boundary-types': 'warn',
+            // Every signature under src/ carries its own types; the override
+            // below relaxes this for the tests, where the callbacks of
+            // describe/it would only collect ": void".
+            '@typescript-eslint/explicit-function-return-type': 'error',
+            '@typescript-eslint/explicit-module-boundary-types': 'error',
             // the JSDoc @param types left over from the JavaScript sources
             'jsdoc/no-types': 'warn',
         },
@@ -81,6 +80,29 @@ export default [
                     caughtErrors: 'all',
                 },
             ],
+
+            // Test code says what it means through its assertions, and the
+            // tests are not an interface anything else builds on - annotating
+            // every describe/it callback and every helper would be noise. The
+            // sources they exercise are the ones that have to be typed.
+            '@typescript-eslint/explicit-function-return-type': 'off',
+            '@typescript-eslint/explicit-module-boundary-types': 'off',
+
+            // The tests are JavaScript checked with checkJs, where JSDoc is
+            // the type syntax rather than a second copy of it - and a test of
+            // a defensive branch has to hand in the value its types forbid,
+            // which only a cast through `any` can do.
+            'jsdoc/no-types': 'off',
+            'jsdoc/reject-any-type': 'off',
+        },
+    },
+    {
+        // The developer scripts are run by hand and ship with nothing - they
+        // are not part of the adapter, so the same goes for them.
+        files: ['tools/**/*.js'],
+        rules: {
+            '@typescript-eslint/explicit-function-return-type': 'off',
+            '@typescript-eslint/explicit-module-boundary-types': 'off',
         },
     },
 ];
