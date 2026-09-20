@@ -2,6 +2,8 @@
 
 import AmberMessage from './AmberMessage';
 import SerialDevice from './SerialDevice';
+import type { SerialDeviceOptions, MessageCallback, ErrorCallback, ReceivedTelegram } from './SerialDevice';
+import type { LoggerInput } from '../SimpleLogger';
 
 const CMD_DATA_REQ = 0x00; //Transmission of wM-Bus data
 const CMD_DATARETRY_REQ = 0x02; //Resend data previously sent by the module
@@ -26,7 +28,13 @@ const CMD_SET_AES_KEY_REQ = 0x50; //AES-Key registration
 class AmberReceiver extends SerialDevice {
     rssiEnabled: boolean;
 
-    constructor(options, mode, onMessage, onError, loggerFunction) {
+    constructor(
+        options: SerialDeviceOptions,
+        mode: string,
+        onMessage: MessageCallback,
+        onError: ErrorCallback,
+        loggerFunction?: LoggerInput,
+    ) {
         super(options, mode, onMessage, onError, loggerFunction);
 
         this.log.setPrefix('AMBER');
@@ -34,11 +42,11 @@ class AmberReceiver extends SerialDevice {
         this.rssiEnabled = false;
     }
 
-    buildPayloadPackage(command, payload) {
+    buildPayloadPackage(command: number, payload: Buffer | null = null): Buffer {
         return new AmberMessage().setPayload(command, payload).build();
     }
 
-    checkAndExtractMessage() {
+    checkAndExtractMessage(): Buffer | null {
         return this.extractMessageByLength(AmberMessage.START_BYTE, AmberMessage.tryToGetLength, messageBuffer =>
             this.isMessageIntact(messageBuffer),
         );
@@ -48,7 +56,7 @@ class AmberReceiver extends SerialDevice {
      * A message with a wrong checksum is not one: its start byte was payload
      * data that happens to look like the start of a message.
      */
-    isMessageIntact(messageBuffer) {
+    isMessageIntact(messageBuffer: Buffer): boolean {
         const parseResult = new AmberMessage().parse(messageBuffer);
 
         if (parseResult === true) {
@@ -64,13 +72,13 @@ class AmberReceiver extends SerialDevice {
      * without this, a telegram that arrives between a command and its response
      * is taken for the answer and fails the command with a command id mismatch.
      */
-    isTelegramMessage(messageBuffer) {
+    isTelegramMessage(messageBuffer: Buffer): boolean {
         const message = new AmberMessage();
         message.parse(messageBuffer);
         return message.commandId === CMD_DATA_IND;
     }
 
-    validateResponse(pkg, response) {
+    validateResponse(pkg: Buffer, response: Buffer): void {
         const mPkg = new AmberMessage();
         mPkg.parse(pkg);
 
@@ -82,7 +90,7 @@ class AmberReceiver extends SerialDevice {
         }
     }
 
-    parseRawMessage(messageBuffer) {
+    parseRawMessage(messageBuffer: Buffer): ReceivedTelegram {
         const amberMessage = new AmberMessage();
         const parseResult = amberMessage.parse(messageBuffer);
         if (parseResult !== true) {
@@ -100,7 +108,7 @@ class AmberReceiver extends SerialDevice {
         };
     }
 
-    getRssi(payload) {
+    getRssi(payload: Buffer): number {
         if (!this.rssiEnabled) {
             return -1;
         }
@@ -108,19 +116,19 @@ class AmberReceiver extends SerialDevice {
         return rssi >= 0x80 ? (rssi - 0x100) / 2 - 74 : rssi / 2 - 74;
     }
 
-    fixPayload(payload) {
+    fixPayload(payload: Buffer): Buffer {
         const withoutRssi = this.removeRssiFromPayload(payload);
         return Buffer.concat([Buffer.from([withoutRssi.length]), withoutRssi]);
     }
 
-    removeRssiFromPayload(payload) {
+    removeRssiFromPayload(payload: Buffer): Buffer {
         if (!this.rssiEnabled) {
             return payload;
         }
         return payload.subarray(0, payload.length - 1);
     }
 
-    getMode() {
+    getMode(): number {
         switch (this.mode) {
             case 'C':
                 return 0x0e;
@@ -133,7 +141,7 @@ class AmberReceiver extends SerialDevice {
         }
     }
 
-    getModeDescription() {
+    getModeDescription(): string {
         switch (this.mode) {
             case 'C':
                 return 'C-Mode';
@@ -146,27 +154,27 @@ class AmberReceiver extends SerialDevice {
         }
     }
 
-    async getReq(address) {
+    async getReq(address: number): Promise<number> {
         const response = await this.sendPackage(CMD_GET_REQ, Buffer.from([address, 0x01]));
         const m = new AmberMessage();
         m.parse(response);
         return m.payload[2];
     }
 
-    async reset() {
+    async reset(): Promise<void> {
         await this.sendPackage(CMD_RESET_REQ, Buffer.alloc(0));
     }
 
-    async isCmdOutDisabled() {
+    async isCmdOutDisabled(): Promise<boolean> {
         const response = await this.getReq(0x05);
         return response == 0x01 ? false : true;
     }
 
-    async setCmdOutEnabled(state) {
-        state = state ? 0x01 : 0x00;
+    async setCmdOutEnabled(state: boolean): Promise<void> {
+        const value = state ? 0x01 : 0x00;
         this.log.debug(`${state ? 'Enabling' : 'Disabling'} UART_CMD_Out...`);
 
-        const response = await this.sendPackage(CMD_SET_REQ, Buffer.from([0x05, 0x01, state]));
+        const response = await this.sendPackage(CMD_SET_REQ, Buffer.from([0x05, 0x01, value]));
         const m = new AmberMessage();
         m.parse(response);
 
@@ -179,28 +187,28 @@ class AmberReceiver extends SerialDevice {
         await this.reset();
     }
 
-    async getAutosleep() {
+    async getAutosleep(): Promise<number> {
         return await this.getReq(0x3f);
     }
 
-    async isRssiEnabled() {
-        return await this.getReq(0x45);
+    async isRssiEnabled(): Promise<boolean> {
+        return (await this.getReq(0x45)) !== 0x00;
     }
 
-    async getFwVersion() {
+    async getFwVersion(): Promise<void> {
         const response = await this.sendPackage(CMD_FWV_REQ, Buffer.alloc(0));
         const m = new AmberMessage();
         m.parse(response);
         this.log.debug(`Firmware version ${m.payload[0]}.${m.payload[1]}.${m.payload[2]}`);
     }
 
-    async setMode() {
+    async setMode(): Promise<void> {
         const mode = this.getMode();
         await this.sendPackage(CMD_SET_MODE_REQ, Buffer.from([mode]));
         this.log.info(`Receiver set to ${this.getModeDescription()}-MODE`);
     }
 
-    async initDevice() {
+    async initDevice(): Promise<void> {
         await this.getFwVersion();
         await this.setMode();
         if (await this.isCmdOutDisabled()) {

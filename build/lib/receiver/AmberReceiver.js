@@ -56,7 +56,7 @@ class AmberReceiver extends import_SerialDevice.default {
     this.log.setPrefix("AMBER");
     this.rssiEnabled = false;
   }
-  buildPayloadPackage(command, payload) {
+  buildPayloadPackage(command, payload = null) {
     return new import_AmberMessage.default().setPayload(command, payload).build();
   }
   checkAndExtractMessage() {
@@ -167,9 +167,9 @@ class AmberReceiver extends import_SerialDevice.default {
     return response == 1 ? false : true;
   }
   async setCmdOutEnabled(state) {
-    state = state ? 1 : 0;
+    const value = state ? 1 : 0;
     this.log.debug(`${state ? "Enabling" : "Disabling"} UART_CMD_Out...`);
-    const response = await this.sendPackage(CMD_SET_REQ, Buffer.from([5, 1, state]));
+    const response = await this.sendPackage(CMD_SET_REQ, Buffer.from([5, 1, value]));
     const m = new import_AmberMessage.default();
     m.parse(response);
     if (m.payload[0] === 1) {
@@ -183,7 +183,7 @@ class AmberReceiver extends import_SerialDevice.default {
     return await this.getReq(63);
   }
   async isRssiEnabled() {
-    return await this.getReq(69);
+    return await this.getReq(69) !== 0;
   }
   async getFwVersion() {
     const response = await this.sendPackage(CMD_FWV_REQ, Buffer.alloc(0));

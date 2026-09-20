@@ -20,10 +20,22 @@ export type TimerHandle = NodeJS.Timeout | ioBroker.Timeout | undefined;
  */
 export interface TimerFunctions {
     /** schedules a callback and returns the handle to cancel it with */
-    setTimeout: (callback: () => void, ms: number) => TimerHandle;
-    /** cancels a scheduled callback */
-    clearTimeout: (handle: TimerHandle) => void;
+    setTimeout(callback: () => void, ms: number): TimerHandle;
+    /**
+     * cancels a scheduled callback
+     *
+     * Written as a method so the parameter is checked bivariantly: the adapter
+     * only accepts the handle type its own setTimeout hands out, and the two
+     * always come from the same source.
+     */
+    clearTimeout(handle: TimerHandle): void;
 }
+
+/**
+ * What the message classes return from parse(): true when the message was
+ * understood, otherwise the reason it was not.
+ */
+export type ParseResult = true | string;
 
 /** A command waiting for its answer. */
 export interface ResponseReader {
@@ -163,8 +175,12 @@ class SerialDevice {
      * message is intact - it must not accept a slice that only looks the part
      * @returns the next message, or null if the buffer holds none
      */
-    extractMessageByLength(startByte, getLength, isIntact) {
-        const findStart = from => {
+    extractMessageByLength(
+        startByte: number | null,
+        getLength: (candidate: Buffer) => number,
+        isIntact: (messageBuffer: Buffer) => boolean,
+    ): Buffer | null {
+        const findStart = (from: number): number => {
             if (startByte === null) {
                 return from < this.parserBuffer.length ? from : -1;
             }
@@ -217,7 +233,7 @@ class SerialDevice {
      * intended: whatever waited for it stops right there instead of continuing
      * to talk to a device that is being shut down.
      *
-     * @returns
+     * @returns a promise that resolves when the time has passed
      */
     delay(ms: number): Promise<void> {
         return new Promise<void>(resolve => this.timers.setTimeout(() => resolve(), ms));
@@ -303,7 +319,7 @@ class SerialDevice {
         return response;
     }
 
-    concatAndTrimParserBuffer(data) {
+    concatAndTrimParserBuffer(data: Buffer): void {
         this.parserBuffer = Buffer.concat([this.parserBuffer, data]);
         if (this.parserBuffer.length > this.maxParserBufferLength) {
             this.log.debug('Buffer too large - cutting to max length!');
@@ -311,7 +327,7 @@ class SerialDevice {
         }
     }
 
-    onData(data) {
+    onData(data: Buffer): void {
         this.log.debug(`RX: ${data.toString('hex')}`);
 
         this.concatAndTrimParserBuffer(data);
@@ -327,7 +343,7 @@ class SerialDevice {
         }
     }
 
-    dispatchMessages() {
+    dispatchMessages(): void {
         let messageBuffer = this.checkAndExtractMessage();
 
         while (messageBuffer !== null) {
@@ -364,17 +380,17 @@ class SerialDevice {
      * what they are override it - only then can a message that nobody expects
      * be recognised as one and dropped.
      */
-    isTelegramMessage(_messageBuffer) {
+    isTelegramMessage(_messageBuffer: Buffer): boolean {
         return this.readPromises.length === 0;
     }
 
-    emitMessage(messageBuffer) {
+    emitMessage(messageBuffer: Buffer): void {
         this.log.debug(`Message received: ${messageBuffer.toString('hex')}`);
         const messageObject = this.parseRawMessage(messageBuffer);
         this.onMessage(messageObject);
     }
 
-    initDeviceConnection() {
+    initDeviceConnection(): void {
         if (!this.options.isTcp) {
             this.port = new this.SerialPortImpl(this.options as ConstructorParameters<typeof SerialPort>[0]);
 
@@ -392,7 +408,7 @@ class SerialDevice {
         }
     }
 
-    handleTcpClose(hadError) {
+    handleTcpClose(hadError: boolean): void {
         if (hadError) {
             // The adapter is told about it right below and reports it with a
             // delay that grows while the connection keeps failing - saying it
@@ -414,7 +430,7 @@ class SerialDevice {
         this.onError(new Error('TCP connection closed'));
     }
 
-    async closeConnection() {
+    async closeConnection(): Promise<void> {
         // Must be set before the socket goes down: handleTcpClose() reconnects
         // unless a close was explicitly requested.
         this.closeRequested = true;
@@ -445,7 +461,7 @@ class SerialDevice {
      * exception, so wait for them and drop them instead of letting the first
      * command deal with the fragment.
      */
-    async discardStaleData() {
+    async discardStaleData(): Promise<void> {
         if (!this.staleDataTimeout) {
             return;
         }
@@ -458,7 +474,7 @@ class SerialDevice {
         }
     }
 
-    async init() {
+    async init(): Promise<void> {
         this.initDeviceConnection();
 
         try {

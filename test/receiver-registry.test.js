@@ -26,9 +26,9 @@ describe('Receiver registry', () => {
 
     it('resolves a receiver by its configured key', () => {
         const amber = getReceiver('amber');
-        expect(amber).to.not.be.undefined;
-        expect(amber.name).to.equal('Amber Wireless AMB8465');
-        expect(amber.ReceiverClass).to.be.a('function');
+        expect(amber, 'amber is registered').to.not.be.undefined;
+        expect(amber?.name).to.equal('Amber Wireless AMB8465');
+        expect(amber?.ReceiverClass).to.be.a('function');
     });
 
     it('still resolves the legacy module file name', () => {
@@ -56,7 +56,7 @@ describe('Receiver registry', () => {
 
     it('gives every receiver a constructible class', () => {
         for (const key of Object.keys(listReceivers())) {
-            expect(getReceiver(key).ReceiverClass, `${key} class`).to.be.a('function');
+            expect(getReceiver(key)?.ReceiverClass, `${key} class`).to.be.a('function');
         }
     });
 });

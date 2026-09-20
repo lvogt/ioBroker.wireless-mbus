@@ -26,6 +26,21 @@ export interface PublicReceiverInfo {
     modes: Record<string, string>;
 }
 
+/** A receiver class as the adapter constructs it. */
+export type ReceiverConstructor =
+    | typeof AmberReceiver
+    | typeof CulReceiver
+    | typeof EbiReceiver
+    | typeof ImstReceiver
+    | typeof ImstV2Receiver
+    | typeof SimpleReceiver
+    | typeof TcpReceiver;
+
+/** A registry entry: what the admin UI sees, plus the class to instantiate. */
+export interface ReceiverRegistryEntry extends PublicReceiverInfo {
+    ReceiverClass: ReceiverConstructor;
+}
+
 const receivers = {
     ebi: {
         name: 'Embit EMB-WMB169/868',
@@ -111,7 +126,7 @@ function listReceivers(): Record<string, PublicReceiverInfo> {
  *
  * @returns the registry entry, or undefined for an unknown type
  */
-function getReceiver(type) {
+function getReceiver(type: unknown): ReceiverRegistryEntry | undefined {
     if (typeof type !== 'string' || !type) {
         return undefined;
     }

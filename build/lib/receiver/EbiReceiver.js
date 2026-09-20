@@ -191,7 +191,7 @@ class EbiReceiver extends import_SerialDevice.default {
     this.log.setPrefix("EBI");
     this.staleDataTimeout = STALE_DATA_TIMEOUT;
   }
-  buildPayloadPackage(command, payload) {
+  buildPayloadPackage(command, payload = null) {
     return new import_EbiMessage.default().setPayload(command, payload).build();
   }
   checkAndExtractMessage() {

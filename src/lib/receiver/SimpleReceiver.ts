@@ -1,6 +1,8 @@
 'use strict';
 
 import SerialDevice from './SerialDevice';
+import type { SerialDeviceOptions, MessageCallback, ErrorCallback, ReceivedTelegram } from './SerialDevice';
+import type { LoggerInput } from '../SimpleLogger';
 
 const CMD_END = '\n';
 const CARRIAGE_RETURN = 0x0d;
@@ -14,7 +16,13 @@ const CRC_MARKER = ['Z'.charCodeAt(0), 'z'.charCodeAt(0)];
 class SimpleReceiver extends SerialDevice {
     frameType: string;
 
-    constructor(options, mode, onMessage, onError, loggerFunction) {
+    constructor(
+        options: SerialDeviceOptions,
+        mode: string,
+        onMessage: MessageCallback,
+        onError: ErrorCallback,
+        loggerFunction?: LoggerInput,
+    ) {
         super(options, mode, onMessage, onError, loggerFunction);
 
         this.log.setPrefix('SIMPLE');
@@ -22,7 +30,7 @@ class SimpleReceiver extends SerialDevice {
     }
 
     /** One telegram per line - and a chunk can hold more than one of them. */
-    checkAndExtractMessage() {
+    checkAndExtractMessage(): Buffer | null {
         for (;;) {
             const end = this.parserBuffer.indexOf(CMD_END);
             if (end === -1) {
@@ -60,11 +68,11 @@ class SimpleReceiver extends SerialDevice {
      * @param line
      * @returns the telegram as the hex string it was written as
      */
-    getHexString(line) {
+    getHexString(line: Buffer): string {
         return line.toString('ascii', CRC_MARKER.includes(line[0]) ? 1 : 0);
     }
 
-    parseRawMessage(messageBuffer) {
+    parseRawMessage(messageBuffer: Buffer): ReceivedTelegram {
         return {
             frameType: this.frameType,
             // The marker is a promise that the telegram carries its CRCs.

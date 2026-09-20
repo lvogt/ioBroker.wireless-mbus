@@ -1,6 +1,8 @@
 'use strict';
 
 import SerialDevice from './SerialDevice';
+import type { SerialDeviceOptions, MessageCallback, ErrorCallback, ReceivedTelegram } from './SerialDevice';
+import type { LoggerInput } from '../SimpleLogger';
 import EbiMessage from './EbiMessage';
 
 const DEVICE_INFORMATION_PROTOCOL = {
@@ -156,7 +158,13 @@ const NETWORK_ROLE_WMB = {
 };
 
 class EbiReceiver extends SerialDevice {
-    constructor(options, mode, onMessage, onError, loggerFunction) {
+    constructor(
+        options: SerialDeviceOptions,
+        mode: string,
+        onMessage: MessageCallback,
+        onError: ErrorCallback,
+        loggerFunction?: LoggerInput,
+    ) {
         super(options, mode, onMessage, onError, loggerFunction);
 
         this.log.setPrefix('EBI');
@@ -167,11 +175,11 @@ class EbiReceiver extends SerialDevice {
         this.staleDataTimeout = STALE_DATA_TIMEOUT;
     }
 
-    buildPayloadPackage(command, payload) {
+    buildPayloadPackage(command: number, payload: Buffer | null = null): Buffer {
         return new EbiMessage().setPayload(command, payload).build();
     }
 
-    checkAndExtractMessage() {
+    checkAndExtractMessage(): Buffer | null {
         return this.extractMessageByLength(
             // The protocol has nothing to synchronise on: no start marker, just
             // a length, a message id, the payload and a one byte checksum
@@ -181,7 +189,7 @@ class EbiReceiver extends SerialDevice {
         );
     }
 
-    getMessageLength(candidate) {
+    getMessageLength(candidate: Buffer): number {
         const length = EbiMessage.tryToGetLength(candidate);
 
         if (length !== -1 && (length < MIN_MESSAGE_LENGTH || length > this.maxParserBufferLength)) {
@@ -198,7 +206,7 @@ class EbiReceiver extends SerialDevice {
      * byte, so it alone would accept one in 256 of the slices that a
      * resynchronisation tries out.
      */
-    isMessageIntact(messageBuffer) {
+    isMessageIntact(messageBuffer: Buffer): boolean {
         const message = new EbiMessage();
 
         if (message.parse(messageBuffer) !== true) {
@@ -212,13 +220,13 @@ class EbiReceiver extends SerialDevice {
      * Without this a telegram that arrives between a command and its response
      * is taken for the response and fails the command.
      */
-    isTelegramMessage(messageBuffer) {
+    isTelegramMessage(messageBuffer: Buffer): boolean {
         const message = new EbiMessage();
         message.parse(messageBuffer);
         return message.messageId === MSG_RECEIVED_DATA;
     }
 
-    validateResponse(pkg, response) {
+    validateResponse(pkg: Buffer, response: Buffer): void {
         const mPkg = new EbiMessage();
         mPkg.parse(pkg);
 
@@ -238,7 +246,7 @@ class EbiReceiver extends SerialDevice {
         }
     }
 
-    parseRawMessage(messageBuffer) {
+    parseRawMessage(messageBuffer: Buffer): ReceivedTelegram {
         const ebiMessage = new EbiMessage();
         const parseResult = ebiMessage.parse(messageBuffer);
         if (parseResult !== true) {
@@ -260,21 +268,21 @@ class EbiReceiver extends SerialDevice {
         };
     }
 
-    getRssi(options, payload) {
+    getRssi(options: number, payload: Buffer): number {
         if (options & 0x8000) {
             return payload.readInt8(2);
         }
         return -1;
     }
 
-    getFrameType(options) {
+    getFrameType(options: number): string {
         if (options & 0x0010) {
             return 'B';
         }
         return 'A';
     }
 
-    getTimestamp(options, payload) {
+    getTimestamp(options: number, payload: Buffer): number {
         if (options & 0x0008) {
             // timestamp since power on
             const pos = 2 + (options & 0x8000 ? 1 : 0);
@@ -283,12 +291,12 @@ class EbiReceiver extends SerialDevice {
         return new Date().getTime();
     }
 
-    stripHeader(options, payload) {
+    stripHeader(options: number, payload: Buffer): Buffer {
         const start = 2 + (options & 0x8000 ? 1 : 0) + (options & 0x0008 ? 4 : 0);
         return payload.subarray(start);
     }
 
-    async reset() {
+    async reset(): Promise<boolean> {
         await this.sendPackage(CMD_RESET, Buffer.alloc(0));
         const response = await this.readResponse();
         const m = new EbiMessage();
@@ -303,7 +311,7 @@ class EbiReceiver extends SerialDevice {
         return true;
     }
 
-    async getDeviceInformation() {
+    async getDeviceInformation(): Promise<Buffer> {
         const response = await this.sendPackage(CMD_DEVICE_INFORMATION, Buffer.alloc(0));
         const m = new EbiMessage();
         m.parse(response);
@@ -314,7 +322,7 @@ class EbiReceiver extends SerialDevice {
         return m.payload;
     }
 
-    async setOutputPower(power) {
+    async setOutputPower(power: number): Promise<void> {
         let payload;
         if (power >= 0) {
             payload = Buffer.from([power & 0xff]);
@@ -325,27 +333,27 @@ class EbiReceiver extends SerialDevice {
         await this.sendPackage(CMD_OUTPUT_POWER, payload);
     }
 
-    async setOperatingChannel(channel) {
+    async setOperatingChannel(channel: number): Promise<void> {
         await this.sendPackage(CMD_OPERATING_CHANNEL, Buffer.from([CHANNELS_WMB[channel]]));
     }
 
-    async setEnergySave(rxPolicy, mcuPolicy) {
+    async setEnergySave(rxPolicy: number, mcuPolicy: number): Promise<void> {
         await this.sendPackage(CMD_ENERGY_SAVE, Buffer.from([rxPolicy, mcuPolicy]));
     }
 
-    async setNetworkAutomatedSettings() {
+    async setNetworkAutomatedSettings(): Promise<void> {
         await this.sendPackage(CMD_NETWORK_AUTOMATED_SETTINGS, Buffer.from([0x80, 0x00]));
     }
 
-    async saveSettings() {
+    async saveSettings(): Promise<void> {
         await this.sendPackage(CMD_SAVE_SETTINGS, Buffer.alloc(0));
     }
 
-    async networkStart() {
+    async networkStart(): Promise<void> {
         await this.sendPackage(CMD_NETWORK_START, Buffer.alloc(0));
     }
 
-    getMode() {
+    getMode(): number {
         switch (this.mode) {
             case 'T':
                 return 0x19;
@@ -358,7 +366,7 @@ class EbiReceiver extends SerialDevice {
         }
     }
 
-    getModeDescription() {
+    getModeDescription(): string {
         switch (this.mode) {
             case 'T':
                 return 'T-Mode 868.950[MHz] @66.666[kbps]';
@@ -371,7 +379,7 @@ class EbiReceiver extends SerialDevice {
         }
     }
 
-    async initDevice() {
+    async initDevice(): Promise<void> {
         const deviceInfo = await this.getDeviceInformation();
         if (!(deviceInfo[0] & 0x40)) {
             throw new Error('This is not an Embit Wireless M-Bus device!');

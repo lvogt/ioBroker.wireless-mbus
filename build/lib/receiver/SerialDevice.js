@@ -152,7 +152,7 @@ class SerialDevice {
    * intended: whatever waited for it stops right there instead of continuing
    * to talk to a device that is being shut down.
    *
-   * @returns
+   * @returns a promise that resolves when the time has passed
    */
   delay(ms) {
     return new Promise((resolve) => this.timers.setTimeout(() => resolve(), ms));

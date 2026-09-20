@@ -2,6 +2,8 @@
 
 import HciMessage from './HciMessage';
 import SerialDevice from './SerialDevice';
+import type { SerialDeviceOptions, MessageCallback, ErrorCallback, ReceivedTelegram } from './SerialDevice';
+import type { LoggerInput } from '../SimpleLogger';
 
 //Endpoint Identifier
 const DEVMGMT_ID = 0x01;
@@ -31,7 +33,13 @@ const LINK_MODE_C2B = 0x09;
 class ImstReceiver extends SerialDevice {
     frameType: string;
 
-    constructor(options, mode, onMessage, onError, loggerFunction) {
+    constructor(
+        options: SerialDeviceOptions,
+        mode: string,
+        onMessage: MessageCallback,
+        onError: ErrorCallback,
+        loggerFunction?: LoggerInput,
+    ) {
         super(options, mode, onMessage, onError, loggerFunction);
 
         this.log.setPrefix('IMST');
@@ -39,11 +47,11 @@ class ImstReceiver extends SerialDevice {
         this.frameType = 'A';
     }
 
-    buildPayloadPackage(command, payload) {
+    buildPayloadPackage(command: number, payload: Buffer | null = null): Buffer {
         return new HciMessage().setPayload(DEVMGMT_ID, command, payload).setCrc(true).build();
     }
 
-    checkAndExtractMessage() {
+    checkAndExtractMessage(): Buffer | null {
         return this.extractMessageByLength(HciMessage.START_BYTE, HciMessage.tryToGetLength, messageBuffer =>
             this.isMessageIntact(messageBuffer),
         );
@@ -55,7 +63,7 @@ class ImstReceiver extends SerialDevice {
      * then the start of frame byte and a self consistent length are all there
      * is to go by.
      */
-    isMessageIntact(messageBuffer) {
+    isMessageIntact(messageBuffer: Buffer): boolean {
         try {
             const parseResult = new HciMessage().parse(messageBuffer);
             if (parseResult === true) {
@@ -73,13 +81,13 @@ class ImstReceiver extends SerialDevice {
      * is taken for the response and fails the command with a message id
      * mismatch.
      */
-    isTelegramMessage(messageBuffer) {
+    isTelegramMessage(messageBuffer: Buffer): boolean {
         const message = new HciMessage();
         message.parse(messageBuffer);
         return message.endpointId === RADIOLINK_ID && message.messageId === RADIOLINK_MSG_WMBUSMSG_IND;
     }
 
-    validateResponse(pkg, response) {
+    validateResponse(pkg: Buffer, response: Buffer): void {
         const mPkg = new HciMessage();
         mPkg.parse(pkg);
 
@@ -91,7 +99,7 @@ class ImstReceiver extends SerialDevice {
         }
     }
 
-    parseRawMessage(messageBuffer) {
+    parseRawMessage(messageBuffer: Buffer): ReceivedTelegram {
         const hciMessage = new HciMessage();
         const parseResult = hciMessage.parse(messageBuffer);
         if (parseResult !== true) {
@@ -107,11 +115,11 @@ class ImstReceiver extends SerialDevice {
         };
     }
 
-    prefixPayloadWithLength(payload) {
+    prefixPayloadWithLength(payload: Buffer): Buffer {
         return Buffer.concat([Buffer.from([payload.length]), payload]);
     }
 
-    getMode() {
+    getMode(): number {
         switch (this.mode) {
             case 'S':
                 return LINK_MODE_S1;
@@ -124,7 +132,7 @@ class ImstReceiver extends SerialDevice {
         }
     }
 
-    async setModeAndDisableSleepMode() {
+    async setModeAndDisableSleepMode(): Promise<void> {
         const mode = this.getMode();
         this.frameType = mode == LINK_MODE_C1B ? 'B' : 'A';
         if (mode > 0x09) {
@@ -134,7 +142,7 @@ class ImstReceiver extends SerialDevice {
         this.log.info(`Receiver set to ${this.mode}-MODE`);
     }
 
-    async initDevice() {
+    async initDevice(): Promise<void> {
         await this.setModeAndDisableSleepMode();
     }
 }

@@ -1,5 +1,7 @@
 'use strict';
 
+import type { ParseResult } from './SerialDevice';
+
 import * as slip from './SlipEncoder';
 
 const CRC_SIZE = 2;
@@ -45,7 +47,7 @@ class HciMessageV2 {
      * @param message
      * @param includeCrc
      */
-    calcCrc(message, includeCrc) {
+    calcCrc(message: Buffer, includeCrc: boolean): number {
         let crc = CRC_INITIAL_VALUE;
         const end = includeCrc ? message.length : message.length - 2;
         for (let i = 0; i < end; i++) {
@@ -54,18 +56,18 @@ class HciMessageV2 {
         return ~crc & 0xffff;
     }
 
-    checkCrc(message) {
+    checkCrc(message: Buffer): boolean {
         return this.calcCrc(message, true) == CRC_GOOD_VALUE;
     }
 
-    calcMessageSize() {
+    calcMessageSize(): number {
         return 2 + this.payload.length + CRC_SIZE;
     }
 
     /**
      * @param destinationId
      */
-    setDestinationId(destinationId) {
+    setDestinationId(destinationId: number): this {
         this.destinationId = destinationId;
         return this;
     }
@@ -73,7 +75,7 @@ class HciMessageV2 {
     /**
      * @param messageId
      */
-    setMessageId(messageId) {
+    setMessageId(messageId: number): this {
         this.messageId = messageId;
         return this;
     }
@@ -81,18 +83,18 @@ class HciMessageV2 {
     /**
      * @param data
      */
-    setPayload(data) {
+    setPayload(data: Buffer | null): this {
         this.payload = data === null ? Buffer.alloc(0) : data;
         return this;
     }
 
-    setupResponse() {
+    setupResponse(): this {
         this.messageId++;
         this.payload = Buffer.alloc(0);
         return this;
     }
 
-    build() {
+    build(): Buffer {
         const message = Buffer.alloc(this.calcMessageSize());
         let messagePos = 0;
 
@@ -110,7 +112,7 @@ class HciMessageV2 {
     /**
      * @param data
      */
-    parse(data) {
+    parse(data: Buffer): ParseResult {
         const message = slip.decode(data);
         let messagePos = 0;
 
