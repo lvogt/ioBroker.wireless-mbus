@@ -1,5 +1,7 @@
 'use strict';
 
+import type { ParseResult } from './SerialDevice';
+
 const CMD_CONFIRM_BIT = 0x80;
 
 class EbiMessage {
@@ -11,7 +13,7 @@ class EbiMessage {
         this.payload = Buffer.alloc(0);
     }
 
-    calcChecksum(data) {
+    calcChecksum(data: Buffer): number {
         let chksum = 0;
         for (let i = 0; i < data.length - 1; i++) {
             chksum += data[i];
@@ -19,22 +21,22 @@ class EbiMessage {
         return chksum & 0xff;
     }
 
-    calcMessageSize() {
+    calcMessageSize(): number {
         return 4 + this.payload.length;
     }
 
-    setPayload(messageId, data) {
+    setPayload(messageId: number, data: Buffer | null): this {
         this.messageId = messageId;
         this.payload = data === null ? Buffer.alloc(0) : data;
         return this;
     }
 
-    setupResponse() {
+    setupResponse(): this {
         this.messageId |= CMD_CONFIRM_BIT;
         return this;
     }
 
-    build() {
+    build(): Buffer {
         const message = Buffer.alloc(this.calcMessageSize());
         message.writeUInt16BE(this.calcMessageSize(), 0);
         message[2] = this.messageId;
@@ -44,7 +46,7 @@ class EbiMessage {
         return message;
     }
 
-    parse(data) {
+    parse(data: Buffer): ParseResult {
         this.messageId = data[2];
         this.payload = Buffer.alloc(data.readUInt16BE(0) - 4);
         data.copy(this.payload, 0, 3, data.length - 1);
@@ -55,7 +57,7 @@ class EbiMessage {
         return true;
     }
 
-    static tryToGetLength(message) {
+    static tryToGetLength(message: Buffer): number {
         if (message.length < 2) {
             return -1;
         }

@@ -46,7 +46,7 @@ class TcpReceiver {
         });
     }
 
-    onData(data) {
+    onData(data: Buffer): void {
         const jsonString = data.toString('utf-8');
         this.log.debug(`Message received: ${jsonString}`);
 
@@ -73,7 +73,7 @@ class TcpReceiver {
         this.onMessage(message);
     }
 
-    async init() {
+    async init(): Promise<void> {
         await new Promise((resolve, reject) => {
             // A port that is already taken - two processes running the same
             // instance, for example - makes the server emit an error, and
@@ -98,7 +98,7 @@ class TcpReceiver {
         };
     }
 
-    async closeConnection() {
+    async closeConnection(): Promise<void> {
         // Without this the listening socket survives an adapter restart and
         // the next init() fails with EADDRINUSE.
         await new Promise(resolve => this.server.close(() => resolve(true)));

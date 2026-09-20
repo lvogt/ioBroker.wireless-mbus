@@ -66,7 +66,8 @@ describe('IMSTv2 SLIP framing', () => {
         messages = [];
         responses = [];
         receiver = new ImstV2Receiver(
-            { path: '/dev/mockPort', baudRate: 115200, serialPortImpl: function () {} },
+            // the framing tests never open a port, so a stub constructor is enough
+            { path: '/dev/mockPort', baudRate: 115200, serialPortImpl: /** @type {any} */ (function () {}) },
             'CT',
             message => messages.push(message),
             () => {},

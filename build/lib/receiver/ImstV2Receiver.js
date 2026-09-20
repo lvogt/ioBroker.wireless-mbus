@@ -59,7 +59,7 @@ class ImstV2Receiver extends import_SerialDevice.default {
     this.log.setPrefix("IMSTv2");
     this.staleDataTimeout = STALE_DATA_TIMEOUT;
   }
-  buildPayloadPackage(command, payload) {
+  buildPayloadPackage(command, payload = null) {
     const sapId = command >= DEVMGMT_OFFSET ? SAP_DEVMGMT : SAP_WMBUS;
     const messageId = command - DEVMGMT_OFFSET;
     return new import_HciMessageV2.default().setDestinationId(sapId).setMessageId(messageId).setPayload(payload).build();

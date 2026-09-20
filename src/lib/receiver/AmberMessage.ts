@@ -1,5 +1,7 @@
 'use strict';
 
+import type { ParseResult } from './SerialDevice';
+
 const CMD_START = 0xff;
 const CMD_CONFIRM_BIT = 0x80;
 
@@ -14,11 +16,11 @@ class AmberMessage {
         this.payload = Buffer.alloc(0);
     }
 
-    calcMessageSize() {
+    calcMessageSize(): number {
         return 4 + this.payload.length;
     }
 
-    calcChecksum(data) {
+    calcChecksum(data: Buffer): number {
         let csum = data[0];
         for (let i = 1; i < data.length - 1; i++) {
             csum ^= data[i];
@@ -26,18 +28,18 @@ class AmberMessage {
         return csum;
     }
 
-    setPayload(commandId, data) {
+    setPayload(commandId: number, data: Buffer | null): this {
         this.commandId = commandId;
         this.payload = data === null ? Buffer.alloc(0) : data;
         return this;
     }
 
-    setupResponse() {
+    setupResponse(): this {
         this.commandId |= CMD_CONFIRM_BIT;
         return this;
     }
 
-    build() {
+    build(): Buffer {
         const message = Buffer.alloc(this.calcMessageSize());
         message[0] = CMD_START;
         message[1] = this.commandId;
@@ -48,7 +50,7 @@ class AmberMessage {
         return message;
     }
 
-    parse(data) {
+    parse(data: Buffer): ParseResult {
         if (data[0] != CMD_START) {
             return `Expected message to start with ${CMD_START} but found ${data[0]}`;
         }
@@ -63,7 +65,7 @@ class AmberMessage {
         return true;
     }
 
-    static tryToGetLength(message) {
+    static tryToGetLength(message: Buffer): number {
         if (message.length < 3) {
             return -1;
         }

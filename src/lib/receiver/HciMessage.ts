@@ -1,5 +1,7 @@
 'use strict';
 
+import type { ParseResult } from './SerialDevice';
+
 const SOF = 0xa5;
 const CRC_FLAG = 0x80;
 const RSSI_FLAG = 0x40;
@@ -67,7 +69,7 @@ class HciMessage {
         this.payload = Buffer.alloc(0);
     }
 
-    calcCrc(message, includeCrc) {
+    calcCrc(message: Buffer, includeCrc: boolean): number {
         let crc = CRC_INITIAL_VALUE;
         const end = includeCrc ? message.length : message.length - 2;
         for (let i = 1; i < end; i++) {
@@ -76,11 +78,11 @@ class HciMessage {
         return ~crc & 0xffff;
     }
 
-    checkCrc(message) {
+    checkCrc(message: Buffer): boolean {
         return this.calcCrc(message, true) == CRC_GOOD_VALUE;
     }
 
-    calcMessageSize() {
+    calcMessageSize(): number {
         return (
             4 +
             this.payload.length +
@@ -90,14 +92,14 @@ class HciMessage {
         );
     }
 
-    setPayload(endpointId, messageId, data) {
+    setPayload(endpointId: number, messageId: number, data: Buffer | null): this {
         this.endpointId = endpointId;
         this.messageId = messageId;
         this.payload = data === null ? Buffer.alloc(0) : data;
         return this;
     }
 
-    setRssi(rssi) {
+    setRssi(rssi: number | null): this {
         if (rssi === null) {
             this.hasRssi = false;
             this.rssi = null;
@@ -108,7 +110,7 @@ class HciMessage {
         return this;
     }
 
-    setTimestamp(timestamp) {
+    setTimestamp(timestamp: number | null): this {
         if (timestamp == null) {
             this.hasTimestamp = false;
             this.timestamp = null;
@@ -119,7 +121,7 @@ class HciMessage {
         return this;
     }
 
-    setCrc(update) {
+    setCrc(update: boolean): this {
         if (update === true) {
             this.hasCrc = true;
         } else {
@@ -128,7 +130,7 @@ class HciMessage {
         return this;
     }
 
-    setupResponse() {
+    setupResponse(): this {
         this.setTimestamp(null);
         this.setRssi(null);
         this.setCrc(true);
@@ -137,7 +139,7 @@ class HciMessage {
         return this;
     }
 
-    buildHeader() {
+    buildHeader(): Buffer {
         const header = Buffer.alloc(HEADER_SIZE);
         const controlField =
             (this.hasCrc ? CRC_FLAG : 0x00) |
@@ -153,7 +155,7 @@ class HciMessage {
         return header;
     }
 
-    build() {
+    build(): Buffer {
         const message = Buffer.alloc(this.calcMessageSize());
         let messagePos = 0;
 
@@ -183,7 +185,7 @@ class HciMessage {
         return message;
     }
 
-    parse(data) {
+    parse(data: Buffer): ParseResult {
         if (data[0] != SOF) {
             throw new Error(`SOF byte is incorrect! Was ${data[0]} expected ${SOF}`);
         }
@@ -228,7 +230,7 @@ class HciMessage {
         return true;
     }
 
-    static tryToGetLength(message) {
+    static tryToGetLength(message: Buffer): number {
         if (message.length < 4) {
             return -1;
         }

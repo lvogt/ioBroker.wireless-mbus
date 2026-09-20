@@ -57,7 +57,7 @@ class ImstReceiver extends import_SerialDevice.default {
     this.log.setPrefix("IMST");
     this.frameType = "A";
   }
-  buildPayloadPackage(command, payload) {
+  buildPayloadPackage(command, payload = null) {
     return new import_HciMessage.default().setPayload(DEVMGMT_ID, command, payload).setCrc(true).build();
   }
   checkAndExtractMessage() {

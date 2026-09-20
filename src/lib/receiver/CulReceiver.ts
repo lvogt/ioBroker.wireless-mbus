@@ -1,6 +1,8 @@
 'use strict';
 
 import SerialDevice from './SerialDevice';
+import type { SerialDeviceOptions, MessageCallback, ErrorCallback, ReceivedTelegram } from './SerialDevice';
+import type { LoggerInput } from '../SimpleLogger';
 
 const CMD_END = '\r\n';
 const CMD_SET_DATA_REPORTING_AND_MODE = 'X21\r\nbr';
@@ -20,7 +22,13 @@ const FRAME_TYPE_B = 0x00;
 const STALE_DATA_TIMEOUT = 100;
 
 class CulReceiver extends SerialDevice {
-    constructor(options, mode, onMessage, onError, loggerFunction) {
+    constructor(
+        options: SerialDeviceOptions,
+        mode: string,
+        onMessage: MessageCallback,
+        onError: ErrorCallback,
+        loggerFunction?: LoggerInput,
+    ) {
         super(options, mode, onMessage, onError, loggerFunction);
 
         this.log.setPrefix('CUL');
@@ -40,7 +48,7 @@ class CulReceiver extends SerialDevice {
      * based CULs do lose it, and the command letter of "X21" going missing was
      * what culfw then answered with "? (21 is unknown)".
      */
-    buildPayloadPackage(command, payload) {
+    buildPayloadPackage(command: string, payload?: string): Buffer {
         const s = CMD_END + command + (payload ? payload : '') + CMD_END;
         return Buffer.from(s);
     }
@@ -52,7 +60,7 @@ class CulReceiver extends SerialDevice {
      * Buffer.from(..., 'hex') stops at the first character that is not a hex
      * digit instead of complaining about it. Take one line at a time.
      */
-    checkAndExtractMessage() {
+    checkAndExtractMessage(): Buffer | null {
         for (;;) {
             const end = this.parserBuffer.indexOf(CMD_END);
             if (end === -1) {
@@ -92,11 +100,11 @@ class CulReceiver extends SerialDevice {
      * that a telegram arriving between a command and its response was taken
      * for the response and failed the command.
      */
-    isTelegramMessage(messageBuffer) {
+    isTelegramMessage(messageBuffer: Buffer): boolean {
         return messageBuffer[0] === FRAME_TYPE_A || messageBuffer[0] === FRAME_TYPE_B;
     }
 
-    parseRawMessage(messageBuffer) {
+    parseRawMessage(messageBuffer: Buffer): ReceivedTelegram {
         let rssi = messageBuffer[messageBuffer.length - 1];
         rssi = rssi >= 0x80 ? (rssi - 0x100) / 2 - 74 : rssi / 2 - 74;
 
@@ -112,7 +120,7 @@ class CulReceiver extends SerialDevice {
         };
     }
 
-    async setDataReportingAndMode() {
+    async setDataReportingAndMode(): Promise<void> {
         const m = this.mode.toLowerCase();
         if (m != 's' && m != 't' && m != 'c') {
             throw new Error('Unknown mode!');
@@ -129,7 +137,7 @@ class CulReceiver extends SerialDevice {
         // down, so that the command goes on waiting for the answer that does
         // say it. Taking the first line for the answer failed the whole init
         // instead, and the adapter then reconnected for good (issue #312).
-        const isModeConfirmation = response => {
+        const isModeConfirmation = (response: Buffer): boolean => {
             const text = response.toString('ascii');
             if (text.endsWith(expectedResponse)) {
                 return true;
@@ -150,7 +158,7 @@ class CulReceiver extends SerialDevice {
         this.log.info(`Receiver set to ${m.toUpperCase()}-MODE and data reporting with RSSI`);
     }
 
-    async checkVersion() {
+    async checkVersion(): Promise<void> {
         try {
             const version = await this.sendPackage(CMD_VERSION);
             this.log.debug(`Version: ${version.toString('ascii')}`);
@@ -160,7 +168,7 @@ class CulReceiver extends SerialDevice {
         }
     }
 
-    async initDevice() {
+    async initDevice(): Promise<void> {
         await this.checkVersion();
         await this.setDataReportingAndMode();
     }

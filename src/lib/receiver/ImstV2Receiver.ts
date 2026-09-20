@@ -2,6 +2,8 @@
 
 import HciMessageV2 from './HciMessageV2';
 import SerialDevice from './SerialDevice';
+import type { SerialDeviceOptions, MessageCallback, ErrorCallback, ReceivedTelegram } from './SerialDevice';
+import type { LoggerInput } from '../SimpleLogger';
 import { END } from './SlipEncoder';
 
 //DestinationId
@@ -38,7 +40,13 @@ const LINK_MODE_C = 0x05;
 const LINK_MODE_TX = 0x06;
 
 class ImstV2Receiver extends SerialDevice {
-    constructor(options, mode, onMessage, onError, loggerFunction) {
+    constructor(
+        options: SerialDeviceOptions,
+        mode: string,
+        onMessage: MessageCallback,
+        onError: ErrorCallback,
+        loggerFunction?: LoggerInput,
+    ) {
         super(options, mode, onMessage, onError, loggerFunction);
 
         this.log.setPrefix('IMSTv2');
@@ -46,7 +54,7 @@ class ImstV2Receiver extends SerialDevice {
         this.staleDataTimeout = STALE_DATA_TIMEOUT;
     }
 
-    buildPayloadPackage(command, payload) {
+    buildPayloadPackage(command: number, payload: Buffer | null = null): Buffer {
         const sapId = command >= DEVMGMT_OFFSET ? SAP_DEVMGMT : SAP_WMBUS;
         const messageId = command - DEVMGMT_OFFSET;
 
@@ -64,7 +72,7 @@ class ImstV2Receiver extends SerialDevice {
      * Losing one command response that way is enough to make initDevice() time
      * out and leave the receiver dead (issues #308 and #309).
      */
-    checkAndExtractMessage() {
+    checkAndExtractMessage(): Buffer | null {
         for (;;) {
             const start = this.parserBuffer.indexOf(END);
             if (start === -1) {
@@ -105,7 +113,7 @@ class ImstV2Receiver extends SerialDevice {
      * telegram would count towards the automatic block list of a device that
      * is working perfectly well.
      */
-    isMessageIntact(messageBuffer) {
+    isMessageIntact(messageBuffer: Buffer): boolean {
         try {
             const parseResult = new HciMessageV2().parse(messageBuffer);
             if (parseResult === true) {
@@ -120,7 +128,7 @@ class ImstV2Receiver extends SerialDevice {
         return false;
     }
 
-    validateResponse(pkg, response) {
+    validateResponse(pkg: Buffer, response: Buffer): void {
         const mPkg = new HciMessageV2();
         mPkg.parse(pkg);
 
@@ -134,13 +142,13 @@ class ImstV2Receiver extends SerialDevice {
         }
     }
 
-    isTelegramMessage(messageBuffer) {
+    isTelegramMessage(messageBuffer: Buffer): boolean {
         const msg = new HciMessageV2();
         msg.parse(messageBuffer);
         return msg.destinationId === 0x09 && msg.messageId === 0x20;
     }
 
-    parseRawMessage(messageBuffer) {
+    parseRawMessage(messageBuffer: Buffer): ReceivedTelegram {
         const hciMessage = new HciMessageV2();
         const parseResult = hciMessage.parse(messageBuffer);
         if (parseResult !== true) {
@@ -168,7 +176,7 @@ class ImstV2Receiver extends SerialDevice {
         };
     }
 
-    getMode() {
+    getMode(): number {
         switch (this.mode) {
             case 'S':
                 return LINK_MODE_S;
@@ -185,7 +193,7 @@ class ImstV2Receiver extends SerialDevice {
         }
     }
 
-    getModeDescription() {
+    getModeDescription(): string {
         switch (this.mode) {
             case 'S':
                 return 'S-Mode';
@@ -202,7 +210,7 @@ class ImstV2Receiver extends SerialDevice {
         }
     }
 
-    logStatus(status) {
+    logStatus(status: number): void {
         if (status === 0x00) {
             this.log.debug('Device status: OK');
         } else {
@@ -210,7 +218,7 @@ class ImstV2Receiver extends SerialDevice {
         }
     }
 
-    async ping() {
+    async ping(): Promise<void> {
         const response = await this.sendPackage(PING_REQ, Buffer.alloc(0));
         const m = new HciMessageV2();
         m.parse(response);
@@ -218,7 +226,7 @@ class ImstV2Receiver extends SerialDevice {
         this.logStatus(m.payload[0]);
     }
 
-    async getFwInfo() {
+    async getFwInfo(): Promise<void> {
         const response = await this.sendPackage(FW_INFO_REQ, Buffer.alloc(0));
         const m = new HciMessageV2();
         m.parse(response);
@@ -233,7 +241,7 @@ class ImstV2Receiver extends SerialDevice {
         this.log.debug(`Firmware v${version} --- build count ${buildCount} on ${date} --- ${fwName}`);
     }
 
-    async setModeAndAndEnableReceiveNotification() {
+    async setModeAndAndEnableReceiveNotification(): Promise<void> {
         const response = await this.sendPackage(GET_ACTIVE_CONFIG_REQ, Buffer.alloc(0));
         const m = new HciMessageV2();
         m.parse(response);
@@ -247,7 +255,7 @@ class ImstV2Receiver extends SerialDevice {
         this.log.info(`Receiver set to ${this.getModeDescription()}`);
     }
 
-    async initDevice() {
+    async initDevice(): Promise<void> {
         await this.ping();
         await this.getFwInfo();
         await this.setModeAndAndEnableReceiveNotification();

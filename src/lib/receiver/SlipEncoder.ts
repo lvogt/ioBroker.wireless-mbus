@@ -3,10 +3,8 @@ const ESC = 0xdb;
 const ESC_END = 0xdc;
 const ESC_ESC = 0xdd;
 
-/**
- * @param message
- */
-function slipEncode(message) {
+/** Wrap a message in SLIP framing. */
+function slipEncode(message: Buffer): Buffer {
     const escapeCount = message.filter(b => b === END || b === ESC).length;
     const encodedMessage = Buffer.alloc(message.length + escapeCount + 2, END);
 
@@ -27,10 +25,8 @@ function slipEncode(message) {
     return encodedMessage;
 }
 
-/**
- * @param message
- */
-function slipDecode(message) {
+/** Take a SLIP framed message apart, throwing if the framing is wrong. */
+function slipDecode(message: Buffer): Buffer {
     const escapeCount = message.filter(b => b === ESC).length;
     const decodedMessage = Buffer.alloc(message.length - escapeCount - 2);
 
