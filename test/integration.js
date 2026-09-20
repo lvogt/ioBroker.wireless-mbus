@@ -78,12 +78,17 @@ async function prepareAdapterWithMock(harness, mockType, forceFail) {
             // the source had single ones. Relative to
             // build/lib/receiver/SerialDevice.js, the mocks copied into the
             // adapter root are three levels up.
+            //
+            // A mock that is already injected is matched as well: the file
+            // stays patched for the whole run, so the suites that follow would
+            // otherwise find nothing to replace and be left with the mock of
+            // the first one.
             const patchedClass = classFile.replace(
-                /require\((["'])serialport\1\)/,
+                /require\((["'])(?:serialport|(?:\.\.\/){3}test\/receiver\/\w+DeviceMock)\1\)/,
                 `require('../../../test/receiver/${mockType}DeviceMock')`,
             );
             if (patchedClass === classFile) {
-                throw new Error('Could not inject the device mock - the serialport require was not found');
+                throw new Error('Could not inject the device mock - no require of serialport or of a mock was found');
             }
             fs.writeFileSync(`${harness.testAdapterDir}/build/lib/receiver/SerialDevice.js`, patchedClass);
 
@@ -592,7 +597,9 @@ tests.integration(path.join(__dirname, '..'), {
                     name: 'Battery',
                     value: '83',
                     unit: 'month',
-                    source: 'description',
+                    // the parser decodes some manufacturer specific records
+                    // itself, so this does not say that a description did
+                    source: 'manufacturer',
                 });
                 expect(rows[0].source).to.equal('telegram');
 

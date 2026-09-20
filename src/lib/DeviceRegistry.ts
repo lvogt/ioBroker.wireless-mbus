@@ -75,7 +75,7 @@ class DeviceRegistry {
      * @param deviceId
      * @returns whether the device has an object tree
      */
-    has(deviceId) {
+    has(deviceId: string): boolean {
         return this.devices.has(deviceId);
     }
 
@@ -86,7 +86,7 @@ class DeviceRegistry {
      * @param layout
      * @returns whether the layout was a new one
      */
-    learnLayout(deviceId, layout) {
+    learnLayout(deviceId: string, layout: DataRecordHeadersCacheEntry): boolean {
         const entry = this.devices.get(deviceId);
         if (!entry || !isValidLayout(layout) || entry.layouts.some(known => known.crc === layout.crc)) {
             return false;
@@ -102,7 +102,7 @@ class DeviceRegistry {
      *
      * @returns every layout that is known
      */
-    layouts() {
+    layouts(): DataRecordHeadersCacheEntry[] {
         return [...this.devices.values()].flatMap(entry => entry.layouts);
     }
 
@@ -112,7 +112,7 @@ class DeviceRegistry {
      * @param deviceId
      * @returns what the device object keeps
      */
-    nativeOf(deviceId) {
+    nativeOf(deviceId: string): { dataRecordHeaders: DataRecordHeadersCacheEntry[] } {
         return { dataRecordHeaders: this.devices.get(deviceId)?.layouts ?? [] };
     }
 }

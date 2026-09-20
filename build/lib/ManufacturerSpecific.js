@@ -39,19 +39,13 @@ function readDescriptions(configured) {
   if (typeof configured !== "object" || Array.isArray(configured)) {
     return { descriptions: {}, error: 'expected one description per manufacturer, e.g. { "ITW": [ ... ] }' };
   }
-  return { descriptions: (
-    /** @type {Record<string, unknown>} */
-    configured
-  ) };
+  return { descriptions: configured };
 }
 function summarize(spec) {
   let layouts = 0;
   let fields = 0;
   for (const entry of spec) {
-    const layout = (
-      /** @type {{ fields?: unknown[] }} */
-      entry
-    );
+    const layout = entry;
     if (layout && Array.isArray(layout.fields)) {
       layouts++;
       fields += layout.fields.length;
