@@ -22,11 +22,19 @@ import { WirelessMbusParser, guessDeviceId } from 'wireless-mbus-parser';
 import { listReceivers, getReceiver } from './lib/receiver';
 import ObjectHelper from './lib/ObjectHelper.js';
 import DeviceRegistry from './lib/DeviceRegistry.js';
+import AesKeys from './lib/AesKeys.js';
+import BlockList from './lib/BlockList.js';
 import { buildHandlers, readDescriptions, EXAMPLE_DESCRIPTION } from './lib/ManufacturerSpecific.js';
 import { SerialPort } from 'serialport';
 import type SerialDevice from './lib/receiver/SerialDevice.js';
 import type TcpReceiver from './lib/receiver/TcpReceiver.js';
 import type { ManufacturerSpecificDataRecordHandler, ParserOptionsFull } from 'wireless-mbus-parser';
+
+// The build emits a source map next to every file, and they carry the source
+// along - so a stack in the log can name the line of the TypeScript it came
+// from instead of the transpiled one. Nothing else switches this on: the
+// adapter is started by js-controller, which does not pass --enable-source-maps.
+process.setSourceMapsEnabled(true);
 
 /** Every receiver the registry can hand out. */
 type Receiver = SerialDevice | TcpReceiver;
@@ -36,10 +44,6 @@ type Receiver = SerialDevice | TcpReceiver;
 // once a full frame with the same header signature has primed the parser's
 // cache, so the first one from every device always fails.
 const EXPECTED_PARSER_ERRORS = ['DATA_RECORD_CACHE_MISSING'];
-
-// How many telegrams of a device may fail to decode before the automatic
-// block list rejects it
-const AUTO_BLOCK_AFTER_FAILURES = 10;
 
 // Delays between two attempts to connect to the receiver (msec). The first
 // ones are quick, because the usual reason for a failed start is a telegram
@@ -56,11 +60,8 @@ class WirelessMbus extends utils.Adapter {
     reconnectDelay: number;
     reconnectAttempts: number;
     parser: WirelessMbusParser;
-    /** device id -> how many of its telegrams failed to decode in a row */
-    failedDevices: Map<string, number>;
-    blockedDevices: Set<string>;
-    needsKey: Set<string>;
-    reportedInvalidKeys: Set<string>;
+    aesKeys: AesKeys;
+    blockList: BlockList;
     createdDevices: Set<string>;
     deviceRegistry: DeviceRegistry;
     manufacturerSpecificHandlers: Record<string, ManufacturerSpecificDataRecordHandler>;
@@ -90,17 +91,10 @@ class WirelessMbus extends utils.Adapter {
         // layouts of the devices that already exist.
         this.parser = new WirelessMbusParser();
 
-        // Device id -> how many of its telegrams failed to decode in a row
-        this.failedDevices = new Map();
-        // Devices the automatic block list rejected, until the adapter is
-        // restarted. Kept apart from this.config, which stays what the user
-        // configured.
-        this.blockedDevices = new Set();
-        // Devices that asked for a key the configuration does not have
-        this.needsKey = new Set();
-        // Devices whose configured key was reported as unusable - once is
-        // enough, the telegrams keep coming
-        this.reportedInvalidKeys = new Set();
+        // Both read the configuration, which onReady() has not seen yet - so
+        // they are replaced there with ones that know it.
+        this.aesKeys = new AesKeys([], this.log);
+        this.blockList = new BlockList([], {}, this.log);
 
         // Devices whose objects have been created or verified in this run
         this.createdDevices = new Set();
@@ -174,13 +168,8 @@ class WirelessMbus extends utils.Adapter {
         };
         await this.objectHelper.createObject(objRaw._id, objRaw);
 
-        if (typeof this.config.aeskeys !== 'undefined') {
-            this.config.aeskeys.forEach(item => {
-                if (item.key === 'UNKNOWN') {
-                    this.needsKey.add(item.id);
-                }
-            });
-        }
+        this.aesKeys = new AesKeys(this.config.aeskeys, this.log);
+        this.blockList = new BlockList(this.config.blacklist, { auto: this.config.autoBlocklist }, this.log);
 
         this.loadManufacturerSpecificDescriptions();
         await this.loadKnownDevices();
@@ -451,12 +440,12 @@ class WirelessMbus extends utils.Adapter {
         }
 
         // check block list
-        if (this.isDeviceBlocked(id)) {
+        if (this.blockList.isBlocked(id)) {
             this.log.debug(`Device is blocked: ${id}`);
             return;
         }
 
-        const key = this.getAesKeyBuffer(id);
+        const key = this.aesKeys.getKeyBuffer(id);
 
         let parsed;
         let result;
@@ -473,7 +462,7 @@ class WirelessMbus extends utils.Adapter {
             return;
         }
 
-        this.resetAutoBlocklist(id);
+        this.blockList.noteSuccess(id);
 
         const deviceId = `${result.deviceInformation.Manufacturer}-${result.deviceInformation.Id}`;
 
@@ -528,108 +517,17 @@ class WirelessMbus extends utils.Adapter {
         // has told nothing else about itself.
         const muted = this.config.ignoreUnknownDevices && !this.deviceRegistry.has(id);
 
-        if (this.config.autoBlocklist) {
-            // Worth it either way - it saves the decoding of every telegram
-            // the device sends from now on - but a device nobody wants to hear
-            // about is blocked without a word.
-            this.checkAutoBlocklist(id, muted);
-        }
+        // Worth it either way - it saves the decoding of every telegram the
+        // device sends from now on - but a device nobody wants to hear about
+        // is blocked without a word.
+        this.blockList.noteFailure(id, muted);
 
         if (muted) {
             return;
         }
 
         this.setState('info.rawdata', data.rawData.toString('hex'), true);
-        this.checkWrongKey(id, name);
-    }
-
-    /**
-     * Resolve the configured AES key for a device into the Buffer the parser
-     * expects. Keys are stored either as 32 hex characters or as a 16
-     * character plain text key.
-     */
-    getAesKeyBuffer(id) {
-        const key = this.getAesKey(id);
-
-        if (typeof key === 'undefined' || key === 'UNKNOWN') {
-            return undefined;
-        }
-
-        if (key.length === 32) {
-            const buffer = Buffer.from(key, 'hex');
-            if (buffer.length === 16) {
-                this.log.debug(`Found AES key for device ${id}`);
-                return buffer;
-            }
-        } else if (key.length === 16) {
-            this.log.debug(`Found AES key for device ${id}`);
-            return Buffer.from(key, 'latin1');
-        }
-
-        if (!this.reportedInvalidKeys.has(id)) {
-            this.reportedInvalidKeys.add(id);
-            this.log.error(`Invalid AES key configured for device ${id} - key rejected!`);
-        }
-
-        return undefined;
-    }
-
-    isDeviceBlocked(id) {
-        if (this.blockedDevices.has(id)) {
-            return true;
-        }
-
-        if (!Array.isArray(this.config.blacklist)) {
-            return false;
-        }
-
-        return this.config.blacklist.some(item => typeof item.id !== 'undefined' && item.id == id);
-    }
-
-    /**
-     * @param id
-     * @param [quiet] report the block in the debug log only
-     */
-    checkAutoBlocklist(id, quiet = false) {
-        const failures = (this.failedDevices.get(id) ?? 0) + 1;
-        this.failedDevices.set(id, failures);
-
-        if (failures >= AUTO_BLOCK_AFTER_FAILURES && !this.blockedDevices.has(id)) {
-            this.blockedDevices.add(id);
-            const message = `Device ${id} is now blocked until adapter restart!`;
-            if (quiet) {
-                this.log.debug(message);
-            } else {
-                this.log.warn(message);
-            }
-        }
-    }
-
-    resetAutoBlocklist(id) {
-        this.failedDevices.delete(id);
-    }
-
-    checkWrongKey(id, errorName) {
-        if (errorName === 'NO_AES_KEY') {
-            this.needsKey.add(id);
-        }
-    }
-
-    /**
-     * The configured key of a device. A configured id that the device id only
-     * starts with counts as well, so one row can stand for a series of
-     * meters - and the longest of them wins, which makes the exact match the
-     * best possible one.
-     */
-    getAesKey(id) {
-        const rows = Array.isArray(this.config.aeskeys) ? this.config.aeskeys : [];
-        const candidates = rows.filter(row => typeof row.id !== 'undefined' && id.startsWith(row.id));
-
-        if (!candidates.length) {
-            return undefined;
-        }
-
-        return candidates.reduce((longest, row) => (row.id.length > longest.id.length ? row : longest)).key;
+        this.aesKeys.checkWrongKey(id, name);
     }
 
     async updateDevice(deviceId, result) {
@@ -751,15 +649,7 @@ class WirelessMbus extends utils.Adapter {
      */
     importNeedsKeyNative(message) {
         const configured = message && Array.isArray(message.aeskeys) ? message.aeskeys : this.config.aeskeys;
-        const aeskeys = Array.isArray(configured) ? [...configured] : [];
-        let added = 0;
-
-        for (const id of this.needsKey) {
-            if (aeskeys.findIndex(item => item.id === id) === -1) {
-                aeskeys.push({ id: id, key: 'UNKNOWN' });
-                added++;
-            }
-        }
+        const { aeskeys, added } = this.aesKeys.mergeInto(Array.isArray(configured) ? configured : []);
 
         // The result names a text of the jsonConfig control: a plain string
         // would not be shown at all next to a native that is used
@@ -858,7 +748,7 @@ class WirelessMbus extends utils.Adapter {
         const data = Buffer.from(hex, 'hex');
         // Nobody says whether a telegram pasted from a log carries its CRCs,
         // so let the parser look for them
-        const options = { verbose: true, key: this.getAesKeyBuffer(guessDeviceId(data)) };
+        const options = { verbose: true, key: this.aesKeys.getKeyBuffer(guessDeviceId(data)) };
 
         try {
             const parsed = await new WirelessMbusParser({ manufacturerSpecificHandlers: handlers }).parse(
@@ -936,7 +826,7 @@ class WirelessMbus extends utils.Adapter {
                     break;
                 case 'needsKey':
                     // A Set does not survive the message box
-                    this.sendTo(obj.from, obj.command, [...this.needsKey], obj.callback);
+                    this.sendTo(obj.from, obj.command, [...this.aesKeys.needsKey], obj.callback);
                     break;
             }
         }

@@ -26,10 +26,12 @@ var import_wireless_mbus_parser = require("wireless-mbus-parser");
 var import_receiver = require("./lib/receiver");
 var import_ObjectHelper = __toESM(require("./lib/ObjectHelper.js"));
 var import_DeviceRegistry = __toESM(require("./lib/DeviceRegistry.js"));
+var import_AesKeys = __toESM(require("./lib/AesKeys.js"));
+var import_BlockList = __toESM(require("./lib/BlockList.js"));
 var import_ManufacturerSpecific = require("./lib/ManufacturerSpecific.js");
 var import_serialport = require("serialport");
+process.setSourceMapsEnabled(true);
 const EXPECTED_PARSER_ERRORS = ["DATA_RECORD_CACHE_MISSING"];
-const AUTO_BLOCK_AFTER_FAILURES = 10;
 const INITIAL_RECONNECT_DELAY = 5e3;
 const MAX_RECONNECT_DELAY = 3e5;
 class WirelessMbus extends utils.Adapter {
@@ -41,11 +43,8 @@ class WirelessMbus extends utils.Adapter {
   reconnectDelay;
   reconnectAttempts;
   parser;
-  /** device id -> how many of its telegrams failed to decode in a row */
-  failedDevices;
-  blockedDevices;
-  needsKey;
-  reportedInvalidKeys;
+  aesKeys;
+  blockList;
   createdDevices;
   deviceRegistry;
   manufacturerSpecificHandlers;
@@ -66,10 +65,8 @@ class WirelessMbus extends utils.Adapter {
     this.reconnectDelay = INITIAL_RECONNECT_DELAY;
     this.reconnectAttempts = 0;
     this.parser = new import_wireless_mbus_parser.WirelessMbusParser();
-    this.failedDevices = /* @__PURE__ */ new Map();
-    this.blockedDevices = /* @__PURE__ */ new Set();
-    this.needsKey = /* @__PURE__ */ new Set();
-    this.reportedInvalidKeys = /* @__PURE__ */ new Set();
+    this.aesKeys = new import_AesKeys.default([], this.log);
+    this.blockList = new import_BlockList.default([], {}, this.log);
     this.createdDevices = /* @__PURE__ */ new Set();
     this.deviceRegistry = new import_DeviceRegistry.default();
     this.manufacturerSpecificHandlers = {};
@@ -124,13 +121,8 @@ class WirelessMbus extends utils.Adapter {
       native: {}
     };
     await this.objectHelper.createObject(objRaw._id, objRaw);
-    if (typeof this.config.aeskeys !== "undefined") {
-      this.config.aeskeys.forEach((item) => {
-        if (item.key === "UNKNOWN") {
-          this.needsKey.add(item.id);
-        }
-      });
-    }
+    this.aesKeys = new import_AesKeys.default(this.config.aeskeys, this.log);
+    this.blockList = new import_BlockList.default(this.config.blacklist, { auto: this.config.autoBlocklist }, this.log);
     this.loadManufacturerSpecificDescriptions();
     await this.loadKnownDevices();
     this.receivers = (0, import_receiver.listReceivers)();
@@ -351,11 +343,11 @@ class WirelessMbus extends utils.Adapter {
       }
       return;
     }
-    if (this.isDeviceBlocked(id)) {
+    if (this.blockList.isBlocked(id)) {
       this.log.debug(`Device is blocked: ${id}`);
       return;
     }
-    const key = this.getAesKeyBuffer(id);
+    const key = this.aesKeys.getKeyBuffer(id);
     let parsed;
     let result;
     try {
@@ -369,7 +361,7 @@ class WirelessMbus extends utils.Adapter {
       this.handleParserError(id, data, error);
       return;
     }
-    this.resetAutoBlocklist(id);
+    this.blockList.noteSuccess(id);
     const deviceId = `${result.deviceInformation.Manufacturer}-${result.deviceInformation.Id}`;
     if (this.config.ignoreUnknownDevices && !this.deviceRegistry.has(deviceId)) {
       this.log.debug(`Device has no object tree and is ignored: ${deviceId}`);
@@ -402,89 +394,12 @@ class WirelessMbus extends utils.Adapter {
     }
     this.log.debug(`Parser failed to parse telegram from device ${id}: ${name} - ${error && error.message}`);
     const muted = this.config.ignoreUnknownDevices && !this.deviceRegistry.has(id);
-    if (this.config.autoBlocklist) {
-      this.checkAutoBlocklist(id, muted);
-    }
+    this.blockList.noteFailure(id, muted);
     if (muted) {
       return;
     }
     this.setState("info.rawdata", data.rawData.toString("hex"), true);
-    this.checkWrongKey(id, name);
-  }
-  /**
-   * Resolve the configured AES key for a device into the Buffer the parser
-   * expects. Keys are stored either as 32 hex characters or as a 16
-   * character plain text key.
-   */
-  getAesKeyBuffer(id) {
-    const key = this.getAesKey(id);
-    if (typeof key === "undefined" || key === "UNKNOWN") {
-      return void 0;
-    }
-    if (key.length === 32) {
-      const buffer = Buffer.from(key, "hex");
-      if (buffer.length === 16) {
-        this.log.debug(`Found AES key for device ${id}`);
-        return buffer;
-      }
-    } else if (key.length === 16) {
-      this.log.debug(`Found AES key for device ${id}`);
-      return Buffer.from(key, "latin1");
-    }
-    if (!this.reportedInvalidKeys.has(id)) {
-      this.reportedInvalidKeys.add(id);
-      this.log.error(`Invalid AES key configured for device ${id} - key rejected!`);
-    }
-    return void 0;
-  }
-  isDeviceBlocked(id) {
-    if (this.blockedDevices.has(id)) {
-      return true;
-    }
-    if (!Array.isArray(this.config.blacklist)) {
-      return false;
-    }
-    return this.config.blacklist.some((item) => typeof item.id !== "undefined" && item.id == id);
-  }
-  /**
-   * @param id
-   * @param [quiet] report the block in the debug log only
-   */
-  checkAutoBlocklist(id, quiet = false) {
-    var _a;
-    const failures = ((_a = this.failedDevices.get(id)) != null ? _a : 0) + 1;
-    this.failedDevices.set(id, failures);
-    if (failures >= AUTO_BLOCK_AFTER_FAILURES && !this.blockedDevices.has(id)) {
-      this.blockedDevices.add(id);
-      const message = `Device ${id} is now blocked until adapter restart!`;
-      if (quiet) {
-        this.log.debug(message);
-      } else {
-        this.log.warn(message);
-      }
-    }
-  }
-  resetAutoBlocklist(id) {
-    this.failedDevices.delete(id);
-  }
-  checkWrongKey(id, errorName) {
-    if (errorName === "NO_AES_KEY") {
-      this.needsKey.add(id);
-    }
-  }
-  /**
-   * The configured key of a device. A configured id that the device id only
-   * starts with counts as well, so one row can stand for a series of
-   * meters - and the longest of them wins, which makes the exact match the
-   * best possible one.
-   */
-  getAesKey(id) {
-    const rows = Array.isArray(this.config.aeskeys) ? this.config.aeskeys : [];
-    const candidates = rows.filter((row) => typeof row.id !== "undefined" && id.startsWith(row.id));
-    if (!candidates.length) {
-      return void 0;
-    }
-    return candidates.reduce((longest, row) => row.id.length > longest.id.length ? row : longest).key;
+    this.aesKeys.checkWrongKey(id, name);
   }
   async updateDevice(deviceId, result) {
     if (!this.createdDevices.has(deviceId)) {
@@ -582,14 +497,7 @@ class WirelessMbus extends utils.Adapter {
    */
   importNeedsKeyNative(message) {
     const configured = message && Array.isArray(message.aeskeys) ? message.aeskeys : this.config.aeskeys;
-    const aeskeys = Array.isArray(configured) ? [...configured] : [];
-    let added = 0;
-    for (const id of this.needsKey) {
-      if (aeskeys.findIndex((item) => item.id === id) === -1) {
-        aeskeys.push({ id, key: "UNKNOWN" });
-        added++;
-      }
-    }
+    const { aeskeys, added } = this.aesKeys.mergeInto(Array.isArray(configured) ? configured : []);
     return {
       native: { aeskeys },
       result: added ? "devicesAdded" : "noNewDevices",
@@ -660,7 +568,7 @@ class WirelessMbus extends utils.Adapter {
       return { native, result: "manufacturerSpecificReport", args: [`The descriptions are ${error}`] };
     }
     const data = Buffer.from(hex, "hex");
-    const options = { verbose: true, key: this.getAesKeyBuffer((0, import_wireless_mbus_parser.guessDeviceId)(data)) };
+    const options = { verbose: true, key: this.aesKeys.getKeyBuffer((0, import_wireless_mbus_parser.guessDeviceId)(data)) };
     try {
       const parsed = await new import_wireless_mbus_parser.WirelessMbusParser({ manufacturerSpecificHandlers: handlers }).parse(
         data,
@@ -733,7 +641,7 @@ class WirelessMbus extends utils.Adapter {
           this.sendTo(obj.from, obj.command, this.importNeedsKeyNative(obj.message), obj.callback);
           break;
         case "needsKey":
-          this.sendTo(obj.from, obj.command, [...this.needsKey], obj.callback);
+          this.sendTo(obj.from, obj.command, [...this.aesKeys.needsKey], obj.callback);
           break;
       }
     }
