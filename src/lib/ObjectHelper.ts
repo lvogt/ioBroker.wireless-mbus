@@ -1,5 +1,10 @@
 'use strict';
 
+import type { LegacyResult } from 'wireless-mbus-parser';
+
+/** One data record of a telegram, as the legacy result hands it out. */
+type DataRecord = LegacyResult['dataRecord'][number];
+
 class ObjectHelper {
     adapter: ioBroker.Adapter;
     units2roles: Record<string, string[]>;
@@ -22,7 +27,7 @@ class ObjectHelper {
         };
     }
 
-    async createObject(name, obj) {
+    async createObject(name: string, obj: ioBroker.SettableObject): Promise<void> {
         try {
             await this.adapter.setObjectNotExistsAsync(name, obj);
         } catch (err) {
@@ -30,7 +35,7 @@ class ObjectHelper {
         }
     }
 
-    async updateState(name, value) {
+    async updateState(name: string, value: ioBroker.StateValue): Promise<void> {
         try {
             await this.adapter.setStateAsync(name, value, true);
         } catch (err) {
@@ -47,7 +52,7 @@ class ObjectHelper {
      * @param deviceId
      * @param native
      */
-    async updateDeviceNative(deviceId, native) {
+    async updateDeviceNative(deviceId: string, native: Record<string, unknown>): Promise<void> {
         try {
             await this.adapter.extendObjectAsync(deviceId, { native });
         } catch (err) {
@@ -55,7 +60,7 @@ class ObjectHelper {
         }
     }
 
-    async createDeviceOrChannel(type, name) {
+    async createDeviceOrChannel(type: 'device' | 'channel', name: string): Promise<void> {
         await this.createObject(name, {
             type: type,
             common: {
@@ -65,7 +70,7 @@ class ObjectHelper {
         });
     }
 
-    async createInfoState(deviceId, name) {
+    async createInfoState(deviceId: string, name: string): Promise<void> {
         await this.createObject(`${deviceId}.info.${name}`, {
             type: 'state',
             common: {
@@ -81,14 +86,14 @@ class ObjectHelper {
         });
     }
 
-    async createDataState(deviceId, item) {
+    async createDataState(deviceId: string, item: DataRecord): Promise<void> {
         const id = `.data.${item.number}-${item.storageNo}-${item.type}`;
         const unit = this.adapter.config.forcekWh && (item.unit == 'Wh' || item.unit == 'J') ? 'kWh' : item.unit;
         const role = item.type.includes('TIME_POINT')
             ? 'date'
             : Object.keys(this.units2roles).find(k => this.units2roles[k].includes(item.unit)) || 'value';
 
-        let name;
+        let name: string;
         if (item.tariff) {
             name = `${item.description} (Tariff ${item.tariff}; ${item.functionFieldText})`;
         } else {
