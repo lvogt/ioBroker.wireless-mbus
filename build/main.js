@@ -37,7 +37,17 @@ const MAX_RECONNECT_DELAY = 3e5;
 class WirelessMbus extends utils.Adapter {
   objectHelper;
   adminMessages;
-  connected;
+  /**
+   * Whether the receiver is connected - not to be confused with the
+   * "connected" of the adapter class, which says whether the adapter reaches
+   * the databases. js-controller stops an adapter that cannot reach them,
+   * and decides that by a flag of that name.
+   *
+   * Undefined until the first answer, so that onReady() reports a receiver
+   * that is not connected yet rather than leaving the state of the run
+   * before - which said "connected" whenever that run ended while it was.
+   */
+  receiverConnected;
   receiver;
   reconnectTimeout;
   reconnectDelay;
@@ -58,7 +68,7 @@ class WirelessMbus extends utils.Adapter {
     this.on("message", this.onMessage.bind(this));
     this.on("unload", this.onUnload.bind(this));
     this.objectHelper = new import_ObjectHelper.default(this);
-    this.connected = false;
+    this.receiverConnected = void 0;
     this.receiver = null;
     this.reconnectTimeout = null;
     this.reconnectDelay = INITIAL_RECONNECT_DELAY;
@@ -305,13 +315,13 @@ class WirelessMbus extends utils.Adapter {
     this.scheduleReconnect();
   }
   async setConnected(isConnected) {
-    if (this.connected === isConnected) {
+    if (this.receiverConnected === isConnected) {
       return;
     }
-    this.connected = isConnected;
+    this.receiverConnected = isConnected;
     try {
-      await this.setStateAsync("info.connection", this.connected, true);
-      this.log.debug(`connected set to ${this.connected}`);
+      await this.setStateAsync("info.connection", this.receiverConnected, true);
+      this.log.debug(`connected set to ${this.receiverConnected}`);
     } catch (error) {
       this.log.error(`Can not update connected state: ${error}`);
     }
