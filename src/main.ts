@@ -19,16 +19,18 @@
 import * as utils from '@iobroker/adapter-core';
 
 import { WirelessMbusParser, guessDeviceId } from 'wireless-mbus-parser';
-import { listReceivers, getReceiver } from './lib/receiver';
-import ObjectHelper from './lib/ObjectHelper.js';
-import DeviceRegistry from './lib/DeviceRegistry.js';
-import AesKeys from './lib/AesKeys.js';
-import BlockList from './lib/BlockList.js';
-import { buildHandlers, readDescriptions, EXAMPLE_DESCRIPTION } from './lib/ManufacturerSpecific.js';
-import { SerialPort } from 'serialport';
-import type SerialDevice from './lib/receiver/SerialDevice.js';
-import type TcpReceiver from './lib/receiver/TcpReceiver.js';
-import type { ManufacturerSpecificDataRecordHandler, ParserOptionsFull } from 'wireless-mbus-parser';
+import { getReceiver } from './lib/receiver';
+import ObjectHelper from './lib/ObjectHelper';
+import DeviceRegistry from './lib/DeviceRegistry';
+import AesKeys from './lib/AesKeys';
+import BlockList from './lib/BlockList';
+import AdminMessages from './lib/AdminMessages';
+import { buildHandlers } from './lib/ManufacturerSpecific';
+import type SerialDevice from './lib/receiver/SerialDevice';
+import type TcpReceiver from './lib/receiver/TcpReceiver';
+import type { LegacyResult, ManufacturerSpecificDataRecordHandler, ParserResultVerbose } from 'wireless-mbus-parser';
+import type { ReceiverRegistryEntry } from './lib/receiver';
+import type { ReceivedTelegram, SerialDeviceOptions } from './lib/receiver/SerialDevice';
 
 // The build emits a source map next to every file, and they carry the source
 // along - so a stack in the log can name the line of the TypeScript it came
@@ -53,7 +55,7 @@ const MAX_RECONNECT_DELAY = 300000;
 
 class WirelessMbus extends utils.Adapter {
     objectHelper: ObjectHelper;
-    receivers: ReturnType<typeof listReceivers>;
+    adminMessages: AdminMessages;
     connected: boolean;
     receiver: Receiver | null;
     reconnectTimeout: ioBroker.Timeout | undefined;
@@ -78,8 +80,6 @@ class WirelessMbus extends utils.Adapter {
 
         this.objectHelper = new ObjectHelper(this);
 
-        this.receivers = {};
-
         this.connected = false;
         this.receiver = null;
         this.reconnectTimeout = null;
@@ -95,6 +95,7 @@ class WirelessMbus extends utils.Adapter {
         // they are replaced there with ones that know it.
         this.aesKeys = new AesKeys([], this.log);
         this.blockList = new BlockList([], {}, this.log);
+        this.adminMessages = new AdminMessages(this, this.aesKeys);
 
         // Devices whose objects have been created or verified in this run
         this.createdDevices = new Set();
@@ -108,7 +109,7 @@ class WirelessMbus extends utils.Adapter {
         this.stateValues = {};
     }
 
-    async closeReceiver() {
+    async closeReceiver(): Promise<void> {
         const receiver = this.receiver;
         this.receiver = null;
 
@@ -124,7 +125,7 @@ class WirelessMbus extends utils.Adapter {
         }
     }
 
-    async onUnload(callback) {
+    async onUnload(callback: () => void): Promise<void> {
         // An adapter timeout would be cleared by js-controller anyway, but
         // serialError() schedules one too and must not leave it behind.
         if (this.reconnectTimeout) {
@@ -136,9 +137,8 @@ class WirelessMbus extends utils.Adapter {
         callback && callback();
     }
 
-    async onReady() {
-        const objConnection = {
-            _id: 'info.connection',
+    async onReady(): Promise<void> {
+        await this.objectHelper.createObject('info.connection', {
             type: 'state',
             common: {
                 role: 'indicator.connected',
@@ -149,11 +149,9 @@ class WirelessMbus extends utils.Adapter {
                 def: false,
             },
             native: {},
-        };
-        await this.objectHelper.createObject(objConnection._id, objConnection);
+        });
 
-        const objRaw = {
-            _id: 'info.rawdata',
+        await this.objectHelper.createObject('info.rawdata', {
             type: 'state',
             common: {
                 // "value" is for numbers - this one holds a telegram as hex
@@ -165,17 +163,16 @@ class WirelessMbus extends utils.Adapter {
                 def: '',
             },
             native: {},
-        };
-        await this.objectHelper.createObject(objRaw._id, objRaw);
+        });
 
         this.aesKeys = new AesKeys(this.config.aeskeys, this.log);
         this.blockList = new BlockList(this.config.blacklist, { auto: this.config.autoBlocklist }, this.log);
+        this.adminMessages = new AdminMessages(this, this.aesKeys);
 
         this.loadManufacturerSpecificDescriptions();
         await this.loadKnownDevices();
 
-        this.receivers = listReceivers();
-        this.setConnected(false);
+        await this.setConnected(false);
 
         await this.connectReceiver();
     }
@@ -188,7 +185,7 @@ class WirelessMbus extends utils.Adapter {
      * other descriptions have nothing to do with it. This has to happen before
      * the parser is created.
      */
-    loadManufacturerSpecificDescriptions() {
+    loadManufacturerSpecificDescriptions(): void {
         const { handlers, reports, error } = buildHandlers(this.config.manufacturerSpecific);
 
         if (error) {
@@ -214,7 +211,7 @@ class WirelessMbus extends utils.Adapter {
      * the only place where the record layouts of their telegrams survive a
      * restart - so this has to happen before the receiver is opened.
      */
-    async loadKnownDevices() {
+    async loadKnownDevices(): Promise<void> {
         let devices: ioBroker.DeviceObject[] = [];
 
         try {
@@ -236,7 +233,7 @@ class WirelessMbus extends utils.Adapter {
      * compact telegram is decoded right away rather than after the next full
      * telegram of the same meter.
      */
-    createParser() {
+    createParser(): WirelessMbusParser {
         const cachedDataRecordHeaders = this.deviceRegistry.layouts();
 
         try {
@@ -262,7 +259,7 @@ class WirelessMbus extends utils.Adapter {
      * used to leave the instance idle until someone restarted it by hand, so
      * keep trying with a growing delay instead.
      */
-    async connectReceiver() {
+    async connectReceiver(): Promise<void> {
         const port = typeof this.config.serialPort !== 'undefined' ? this.config.serialPort : '/dev/ttyWMBUS';
         // the admin UI may store this as a string, so go through String()
         const baud =
@@ -303,12 +300,12 @@ class WirelessMbus extends utils.Adapter {
             this.log.debug(`Created device of type: ${receiverInfo.name}`);
 
             await this.receiver?.init();
-            this.setConnected(true);
+            await this.setConnected(true);
             this.reconnectDelay = INITIAL_RECONNECT_DELAY;
             this.reconnectAttempts = 0;
         } catch (error) {
             this.logConnectionFailure(`Error opening serial port ${port} with baudrate ${baud}: ${error}`);
-            this.setConnected(false);
+            await this.setConnected(false);
             await this.closeReceiver();
             this.scheduleReconnect();
         }
@@ -319,7 +316,7 @@ class WirelessMbus extends utils.Adapter {
      * are not: a receiver that stays unreachable would otherwise fill the log
      * with the same line for as long as it is away.
      */
-    logConnectionFailure(message) {
+    logConnectionFailure(message: string): void {
         if (this.reconnectAttempts) {
             this.log.debug(message);
         } else {
@@ -327,7 +324,7 @@ class WirelessMbus extends utils.Adapter {
         }
     }
 
-    scheduleReconnect() {
+    scheduleReconnect(): void {
         if (this.reconnectTimeout) {
             // A failing connection reports itself twice more often than not:
             // the port emits an error and the pending command times out
@@ -358,7 +355,7 @@ class WirelessMbus extends utils.Adapter {
      * back to the receiver's first mode beats initialising the hardware with
      * one it does not know.
      */
-    resolveMode(receiverInfo, configuredMode) {
+    resolveMode(receiverInfo: ReceiverRegistryEntry, configuredMode: string): string {
         const modes = Object.keys(receiverInfo.modes);
 
         if (modes.includes(configuredMode)) {
@@ -375,7 +372,7 @@ class WirelessMbus extends utils.Adapter {
         return modes[0];
     }
 
-    createOptions(port, baud) {
+    createOptions(port: string, baud: number): SerialDeviceOptions {
         const matches = String(port).match(/tcp:\/\/([^:]+):(\d+)/);
         if (matches) {
             return { isTcp: true, host: matches[1], port: parseInt(matches[2]) };
@@ -383,7 +380,7 @@ class WirelessMbus extends utils.Adapter {
         return { path: port, baudRate: baud };
     }
 
-    async serialError(err) {
+    async serialError(err: Error): Promise<void> {
         this.logConnectionFailure(`Serialport error: ${err.message}`);
 
         // A second error for the same connection finds this.receiver already
@@ -392,12 +389,12 @@ class WirelessMbus extends utils.Adapter {
             return;
         }
 
-        this.setConnected(false);
+        await this.setConnected(false);
         await this.closeReceiver();
         this.scheduleReconnect();
     }
 
-    async setConnected(isConnected) {
+    async setConnected(isConnected: boolean): Promise<void> {
         if (this.connected === isConnected) {
             return;
         }
@@ -417,7 +414,7 @@ class WirelessMbus extends utils.Adapter {
      * an exception in here would be an unhandled rejection - and adapter-core
      * terminates the adapter over one of those.
      */
-    async dataReceived(data) {
+    async dataReceived(data: ReceivedTelegram): Promise<void> {
         try {
             await this.handleTelegram(data);
         } catch (error) {
@@ -425,8 +422,8 @@ class WirelessMbus extends utils.Adapter {
         }
     }
 
-    async handleTelegram(data) {
-        this.setConnected(true);
+    async handleTelegram(data: ReceivedTelegram): Promise<void> {
+        await this.setConnected(true);
 
         const id = guessDeviceId(data.rawData);
 
@@ -458,7 +455,7 @@ class WirelessMbus extends utils.Adapter {
             });
             result = WirelessMbusParser.toLegacyResult(parsed);
         } catch (error) {
-            this.handleParserError(id, data, error);
+            await this.handleParserError(id, data, error);
             return;
         }
 
@@ -482,7 +479,7 @@ class WirelessMbus extends utils.Adapter {
      * @param deviceId
      * @param parsed
      */
-    async rememberDataRecordHeaders(deviceId, parsed) {
+    async rememberDataRecordHeaders(deviceId: string, parsed: ParserResultVerbose): Promise<void> {
         const layout = WirelessMbusParser.getDataRecordHeadersCacheEntry(parsed);
 
         if (!this.deviceRegistry.learnLayout(deviceId, layout)) {
@@ -497,8 +494,10 @@ class WirelessMbus extends utils.Adapter {
         await this.objectHelper.updateDeviceNative(deviceId, this.deviceRegistry.nativeOf(deviceId));
     }
 
-    handleParserError(id, data, error) {
-        const name = error && error.name ? error.name : 'UNKNOWN_ERROR';
+    async handleParserError(id: string, data: ReceivedTelegram, error: unknown): Promise<void> {
+        // the parser throws a ParserError, but a telegram can trip anything
+        const thrown = error instanceof Error ? error : undefined;
+        const name = thrown?.name || 'UNKNOWN_ERROR';
         const isExpected = EXPECTED_PARSER_ERRORS.includes(name);
 
         if (isExpected) {
@@ -508,7 +507,7 @@ class WirelessMbus extends utils.Adapter {
             return;
         }
 
-        this.log.debug(`Parser failed to parse telegram from device ${id}: ${name} - ${error && error.message}`);
+        this.log.debug(`Parser failed to parse telegram from device ${id}: ${name} - ${thrown?.message}`);
 
         // A device without an object tree is none of the user's business while
         // "ignoreUnknownDevices" is on: a telegram of one that decodes is
@@ -526,11 +525,11 @@ class WirelessMbus extends utils.Adapter {
             return;
         }
 
-        this.setState('info.rawdata', data.rawData.toString('hex'), true);
+        await this.setState('info.rawdata', data.rawData.toString('hex'), true);
         this.aesKeys.checkWrongKey(id, name);
     }
 
-    async updateDevice(deviceId, result) {
+    async updateDevice(deviceId: string, result: LegacyResult): Promise<void> {
         if (!this.createdDevices.has(deviceId)) {
             await this.createDeviceObjects(deviceId, result);
         }
@@ -538,7 +537,7 @@ class WirelessMbus extends utils.Adapter {
         await this.updateDeviceStates(deviceId, result);
     }
 
-    async createDeviceObjects(deviceId, data) {
+    async createDeviceObjects(deviceId: string, data: LegacyResult): Promise<void> {
         this.log.debug(`Creating device: ${deviceId}`);
         await this.objectHelper.createDeviceOrChannel('device', deviceId);
         await this.objectHelper.createDeviceOrChannel('channel', `${deviceId}.data`);
@@ -558,7 +557,7 @@ class WirelessMbus extends utils.Adapter {
         this.deviceRegistry.add(deviceId);
     }
 
-    async updateDeviceStates(deviceId, data) {
+    async updateDeviceStates(deviceId: string, data: LegacyResult): Promise<void> {
         this.log.debug(`Updating device: ${deviceId}`);
         for (const key of Object.keys(data.deviceInformation)) {
             const name = `${deviceId}.info.${key}`;
@@ -582,8 +581,10 @@ class WirelessMbus extends utils.Adapter {
             ) {
                 this.stateValues[name] = item.value;
 
+                // A record of an energy unit carries a number; anything else
+                // would have been divided into a NaN.
                 let val = item.value;
-                if (this.config.forcekWh) {
+                if (this.config.forcekWh && typeof val === 'number') {
                     if (item.unit == 'Wh') {
                         val = val / 1000;
                     } else if (item.unit == 'J') {
@@ -597,239 +598,8 @@ class WirelessMbus extends utils.Adapter {
         }
     }
 
-    /**
-     * The serial ports as jsonConfig selectSendTo options. The control is
-     * configured with "manual": true, so a port that is not listed - a
-     * tcp://host:port address for instance - can still be typed in.
-     */
-    async listUartOptions() {
-        if (!SerialPort) {
-            this.log.warn('Module serialport is not available');
-            return [];
-        }
-
-        try {
-            const ports = await SerialPort.list();
-            this.log.debug(`Found serial ports: ${JSON.stringify(ports)}`);
-            return ports.map(port => ({
-                label: port.manufacturer ? `${port.path} (${port.manufacturer})` : port.path,
-                value: port.path,
-            }));
-        } catch (error) {
-            this.log.error(`Could not list the serial ports: ${error}`);
-            return [];
-        }
-    }
-
-    /** The modes of one receiver as jsonConfig selectSendTo options. */
-    listWmbusModeOptions(deviceType) {
-        const receiver = getReceiver(deviceType);
-        if (!receiver) {
-            return [];
-        }
-
-        return Object.entries(receiver.modes).map(([value, label]) => ({ label, value }));
-    }
-
-    /**
-     * Merge the devices that asked for a key into the key list, so they only
-     * need the key filled in.
-     *
-     * The list to merge into comes from the open form, which the jsonConfig
-     * control sends along - not from the saved configuration. Merging into
-     * what the adapter has saved replaced whatever was in the form: rows typed
-     * since the last save were lost, and so were saved rows whenever the
-     * running instance had not picked them up yet.
-     *
-     * The result goes to a sendTo control with "useNative", which puts the
-     * returned aeskeys into the open form without saving anything -
-     * deliberately no "saveConfig", because the added rows still carry the
-     * placeholder key and saving now would restart the instance for a
-     * configuration the user has not finished editing.
-     */
-    importNeedsKeyNative(message) {
-        const configured = message && Array.isArray(message.aeskeys) ? message.aeskeys : this.config.aeskeys;
-        const { aeskeys, added } = this.aesKeys.mergeInto(Array.isArray(configured) ? configured : []);
-
-        // The result names a text of the jsonConfig control: a plain string
-        // would not be shown at all next to a native that is used
-        return {
-            native: { aeskeys },
-            result: added ? 'devicesAdded' : 'noNewDevices',
-            args: [added],
-        };
-    }
-
-    /**
-     * What the parser makes of the descriptions in the open form: one line per
-     * manufacturer, with the message the parser rejected a description with -
-     * which is what tells its author where it is wrong.
-     *
-     * The text goes back as the result itself rather than through the "result"
-     * map of the control: a mapped result is shown *and* alerted a second time
-     * in its raw form unless the control writes a native back, which is what
-     * showed the name of the text instead of the text. What it says is the
-     * report of the parser, which is English wherever it comes from.
-     *
-     * @param [message] the descriptions, as the jsonConfig control sends them
-     */
-    checkManufacturerSpecific(message) {
-        const configured =
-            message && 'descriptions' in message ? message.descriptions : this.config.manufacturerSpecific;
-        const { reports, error } = buildHandlers(configured);
-
-        if (error) {
-            return { result: `The descriptions are ${error}` };
-        }
-
-        if (!reports.length) {
-            return { result: 'No description is configured' };
-        }
-
-        return { result: reports.map(report => `${report.manufacturer}: ${report.message}`).join('\n') };
-    }
-
-    /**
-     * Hand the editor an example description, for somebody who has nothing to
-     * start from - but never over a description somebody wrote, not even a
-     * broken one: what is in the editor may be half typed.
-     *
-     * @param [message] the descriptions of the open form
-     */
-    exampleManufacturerSpecific(message) {
-        const configured =
-            message && 'descriptions' in message ? message.descriptions : this.config.manufacturerSpecific;
-        const { descriptions, error } = readDescriptions(configured);
-
-        if (error || Object.keys(descriptions).length) {
-            // A plain text is alerted as it is; a mapped one would be shown
-            // twice, because nothing is written back to the form here.
-            return { result: 'There is a description already - the example is in the README of the adapter' };
-        }
-
-        return {
-            native: { manufacturerSpecific: EXAMPLE_DESCRIPTION },
-            result: 'manufacturerSpecificExampleInserted',
-        };
-    }
-
-    /**
-     * Decode one telegram with the descriptions of the open form and answer
-     * with the states it would write - which is the only way to see whether a
-     * description names the right bytes without saving it first.
-     *
-     * The rows go into a table of the form through "useNative": a row per
-     * state, and the source column says whether it is a record of the telegram
-     * or a value a description got out of one.
-     *
-     * @param [message] the descriptions and the telegram, as hex
-     */
-    async previewManufacturerSpecific(message) {
-        const hex = String((message && message.telegram) || '').replace(/[\s:.-]/g, '');
-        /** @type {{ manufacturerSpecificPreview: object[] }} */
-        interface PreviewRow {
-            state: string;
-            name: string;
-            value: string;
-            unit: string;
-            source: string;
-        }
-        const native: { manufacturerSpecificPreview: PreviewRow[] } = { manufacturerSpecificPreview: [] };
-
-        if (!hex.length || hex.length % 2 || !/^[0-9a-fA-F]+$/.test(hex)) {
-            return { native, result: 'manufacturerSpecificNoTelegram' };
-        }
-
-        const { handlers, error } = buildHandlers(message && message.descriptions);
-        if (error) {
-            return { native, result: 'manufacturerSpecificReport', args: [`The descriptions are ${error}`] };
-        }
-
-        const data = Buffer.from(hex, 'hex');
-        // Nobody says whether a telegram pasted from a log carries its CRCs,
-        // so let the parser look for them
-        const options = { verbose: true, key: this.aesKeys.getKeyBuffer(guessDeviceId(data)) };
-
-        try {
-            const parsed = await new WirelessMbusParser({ manufacturerSpecificHandlers: handlers }).parse(
-                data,
-                options as ParserOptionsFull,
-            );
-            const result = WirelessMbusParser.toLegacyResult(parsed);
-            const device = `${result.deviceInformation.Manufacturer}-${result.deviceInformation.Id}`;
-
-            const rows = result.dataRecord.map((record, index) => ({
-                // the id the adapter would write, so it can be looked up
-                state: `${device}.data.${record.number}-${record.storageNo}-${record.type}`,
-                name: record.description,
-                value: `${record.value}`,
-                unit: record.unit,
-                // everything behind the records of the telegram came out of a
-                // manufacturer specific blob
-                source: index < parsed.dataRecords.length ? 'telegram' : 'description',
-            }));
-
-            native.manufacturerSpecificPreview = rows;
-            return {
-                native,
-                result: 'manufacturerSpecificPreviewOk',
-                args: [rows.filter(row => row.source === 'description').length],
-            };
-        } catch (thrown) {
-            const error = thrown instanceof Error ? thrown : new Error(`${thrown}`);
-            return {
-                native,
-                result: 'manufacturerSpecificReport',
-                args: [`The telegram could not be decoded: ${error.name} - ${error.message}`],
-            };
-        }
-    }
-
-    onMessage(obj) {
-        if (typeof obj === 'object' && obj.callback) {
-            switch (obj.command) {
-                case 'listUart':
-                    this.listUartOptions().then(options => this.sendTo(obj.from, obj.command, options, obj.callback));
-                    break;
-                case 'listReceiver':
-                    this.sendTo(
-                        obj.from,
-                        obj.command,
-                        Object.entries(this.receivers).map(([value, receiver]) => ({
-                            label: receiver.name,
-                            value,
-                        })),
-                        obj.callback,
-                    );
-                    break;
-                case 'listWmbusMode':
-                    this.sendTo(
-                        obj.from,
-                        obj.command,
-                        this.listWmbusModeOptions(obj.message && obj.message.deviceType),
-                        obj.callback,
-                    );
-                    break;
-                case 'exampleManufacturerSpecific':
-                    this.sendTo(obj.from, obj.command, this.exampleManufacturerSpecific(obj.message), obj.callback);
-                    break;
-                case 'checkManufacturerSpecific':
-                    this.sendTo(obj.from, obj.command, this.checkManufacturerSpecific(obj.message), obj.callback);
-                    break;
-                case 'previewManufacturerSpecific':
-                    this.previewManufacturerSpecific(obj.message).then(result =>
-                        this.sendTo(obj.from, obj.command, result, obj.callback),
-                    );
-                    break;
-                case 'importNeedsKey':
-                    this.sendTo(obj.from, obj.command, this.importNeedsKeyNative(obj.message), obj.callback);
-                    break;
-                case 'needsKey':
-                    // A Set does not survive the message box
-                    this.sendTo(obj.from, obj.command, [...this.aesKeys.needsKey], obj.callback);
-                    break;
-            }
-        }
+    onMessage(obj: ioBroker.Message): void {
+        this.adminMessages.handle(obj);
     }
 }
 
