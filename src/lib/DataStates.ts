@@ -67,12 +67,20 @@ const FUNCTION_FIELDS = ['instantaneous value', 'maximum value', 'minimum value'
 const METADATA_KEYS: (keyof Metadata)[] = ['name', 'role', 'unit'];
 
 /**
+ * @param record
+ * @returns the name of the state of a record in the data channel of its device
+ */
+export function dataStateName(record: LegacyDataRecord): string {
+    return `${record.number}-${record.storageNo}-${record.type}`;
+}
+
+/**
  * @param deviceId
  * @param record
  * @returns the id of the state of a record, relative to the namespace of the instance
  */
 export function dataStateId(deviceId: string, record: LegacyDataRecord): string {
-    return `${deviceId}.data.${record.number}-${record.storageNo}-${record.type}`;
+    return `${deviceId}.data.${dataStateName(record)}`;
 }
 
 /**

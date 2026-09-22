@@ -139,6 +139,22 @@ Two things are worth knowing:
 * **A description replaces the one the parser ships** for that manufacturer, rather than adding to
   it. Describing one value of an Itron smoke detector means its other 25 are no longer written.
 
+### Telegram variants
+
+Most meters send telegrams of one layout. Some send a second one now and then - the values of the
+last billing period, or setup data - and a few alternate between several. The adapter counts every
+layout of a device as a variant, named by the checksum of its record headers (e.g. `3A7F`). The full
+and the compact telegrams of a layout are the same variant. What it has seen is kept with the device
+object, so it survives a restart; the counters are written at most once an hour, and a new variant
+right away.
+
+The "Telegram variants" tab shows them: "Show the telegram variants" lists every variant of every
+device, with the kind of frames, how many telegrams were seen, when it was seen first and last, and
+the states its records are written to. None of the variants is treated as the better one - a value
+of each goes to the state of its own record. If you do not want the values of a variant at all,
+enter the device address and the variant in the list of ignored telegram variants: its telegrams
+are dropped once they are decoded, and they are still counted in the table.
+
 ## Updating from 0.11.x
 
 Version 0.12.0 replaces the built-in telegram parser with the
@@ -190,6 +206,8 @@ battery life of a PRIOS meter is reported in months rather than in years.
 * (ChL) Name, unit and role of the data states are kept up to date, which can be switched off
 * (ChL) Fix the states of data records that a device did not have in its first telegram after a start of the adapter: they were written without being created
 * (ChL) Fix states, and devices, that were deleted in the object tree while the adapter was running: they were written without an object until the next start, and are created again by the next telegram now
+* (ChL) Count the telegram variants of every device - the layouts of data records a meter sends - and show them in the new "Telegram variants" tab of the admin UI
+* (ChL) Telegram variants can be ignored per device, so that the values of a layout nobody wants are not written
 
 ### 0.13.1 (2026-09-22)
 * (ChL) Convert the adapter to TypeScript

@@ -286,7 +286,9 @@
     "manufacturerSpecificTelegram": "",
     "manufacturerSpecificPreview": [],
     "aeskeys": [],
-    "blacklist": []
+    "blacklist": [],
+    "ignoredVariants": [],
+    "telegramVariants": []
   },
   "objects": [],
   "instanceObjects": [
