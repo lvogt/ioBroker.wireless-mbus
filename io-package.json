@@ -281,6 +281,7 @@
     "forcekWh": false,
     "autoBlocklist": true,
     "ignoreUnknownDevices": false,
+    "updateStateObjects": true,
     "manufacturerSpecific": "{}",
     "manufacturerSpecificTelegram": "",
     "manufacturerSpecificPreview": [],

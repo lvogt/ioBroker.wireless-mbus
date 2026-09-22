@@ -9,6 +9,7 @@
     "Device address": "Dirección del dispositivo",
     "Force energy units to kWh": "Forzar unidades de energía a kWh",
     "Insert an example": "Insertar un ejemplo",
+    "Keep name, unit and role of the states up to date": "Mantener actualizados el nombre, la unidad y el rol de los estados",
     "Manufacturer specific data": "Datos específicos del fabricante",
     "Name": "Nombre",
     "Only handle devices that already have an object tree": "Procesar solo los dispositivos que ya tienen un árbol de objetos",
@@ -42,6 +43,7 @@
     "serialBaudRate": "Velocidad en baudios en serie",
     "serialPort": "Puerto serial",
     "serialPortHelp": "Seleccione un puerto o escriba uno; para un dispositivo serie accesible a través de la red, utilice tcp://host:port",
+    "updateStateObjectsHelp": "El nombre, la unidad y el rol de un estado de datos siguen al telegrama decodificado, por ejemplo tras una actualización del analizador o al cambiar \"Forzar unidades de energía a kWh\". Desactívelo para conservar los nombres que haya cambiado usted mismo.",
     "wMBus Mode": "Modo wMBus",
     "wMBus Receiver": "Receptor wMBus"
 }

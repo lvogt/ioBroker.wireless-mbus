@@ -9,6 +9,7 @@
     "Device address": "Geräte Adresse",
     "Force energy units to kWh": "Energieeinheiten auf kWh setzen",
     "Insert an example": "Beispiel einfügen",
+    "Keep name, unit and role of the states up to date": "Name, Einheit und Rolle der Datenpunkte aktuell halten",
     "Manufacturer specific data": "Herstellerspezifische Daten",
     "Name": "Name",
     "Only handle devices that already have an object tree": "Ignoriere alle Geräte, die nicht bereits einen Objektbaum haben",
@@ -42,6 +43,7 @@
     "serialBaudRate": "Serielle Baudrate",
     "serialPort": "Serielle Schnittstelle",
     "serialPortHelp": "Wählen Sie einen Port aus oder geben Sie einen ein. Für ein serielles Gerät, das über das Netzwerk erreichbar ist, verwenden Sie tcp://host:port",
+    "updateStateObjectsHelp": "Name, Einheit und Rolle eines Datenpunkts folgen dem dekodierten Telegramm, zum Beispiel nach einem Update des Parsers oder wenn \"Energieeinheiten auf kWh setzen\" umgeschaltet wird. Ausschalten, um selbst vergebene Namen zu behalten.",
     "wMBus Mode": "wMBus Mode",
     "wMBus Receiver": "wMBus Empfänger"
 }

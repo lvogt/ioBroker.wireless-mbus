@@ -124,6 +124,17 @@
                     "md": 6,
                     "lg": 4,
                     "xl": 4
+                },
+                "updateStateObjects": {
+                    "type": "checkbox",
+                    "label": "Keep name, unit and role of the states up to date",
+                    "help": "updateStateObjectsHelp",
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 4,
+                    "xl": 4
                 }
             }
         },
