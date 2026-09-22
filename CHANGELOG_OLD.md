@@ -1,4 +1,19 @@
 # Older changes
+## 0.12.0 (2026-09-03)
+* (ChL) Replace the built-in telegram parser with the wireless-mbus-parser library
+* (ChL) New admin configuration UI (JSON config); a serial port can now simply be typed in, the separate "custom port" field is gone
+* (ChL) Fix shutdown of the adapter: a serial connection over TCP was not closed properly and could reconnect itself while the adapter was stopping
+* (ChL) Measured values are now stored as numbers instead of preformatted strings - a history adapter that stored them as text starts a new series
+* (ChL) Fix decoding of the tariff and device unit of a data record
+* (ChL) Compact telegrams are now supported without a separate option; the option "Cache for compact frames support" was removed
+* (ChL) Follow further ioBroker repository recommendations: move the test code below `test/`, use the short `admin/i18n/<lang>.json` layout and clean up the keywords
+* (ChL) Run the adapter tests only after linting and type checking succeeded
+* (ChL) Use the adapter's own timer functions, so pending timers are cleared when the adapter is unloaded
+* (ChL) Fix receivers getting stuck after disturbed reception: a damaged telegram no longer takes the following ones with it, and no longer leaves the adapter yellow until it is restarted by hand (#308, #309)
+* (ChL) The adapter reconnects to the receiver instead of staying idle or stopping when the connection fails
+* (ChL) Fix telegrams getting lost when several meters transmit at once, and damaged data being reported as readings of devices that do not exist
+* (ChL) Declare the state that holds the raw data of an unreadable telegram as text rather than as a numeric value
+
 ## 0.11.0 (2026-08-29)
 * (ChL) Require node.js 22 or newer, js-controller >=6.0.11 and admin >=7.6.20
 * (ChL) Switch to @iobroker/eslint-config (ESLint 9 + Prettier)
