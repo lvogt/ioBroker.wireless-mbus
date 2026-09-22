@@ -26,6 +26,7 @@ var import_wireless_mbus_parser = require("wireless-mbus-parser");
 var import_receiver = require("./lib/receiver");
 var import_ObjectHelper = __toESM(require("./lib/ObjectHelper"));
 var import_DataStates = __toESM(require("./lib/DataStates"));
+var import_TelegramVariants = __toESM(require("./lib/TelegramVariants"));
 var import_DeviceRegistry = __toESM(require("./lib/DeviceRegistry"));
 var import_AesKeys = __toESM(require("./lib/AesKeys"));
 var import_BlockList = __toESM(require("./lib/BlockList"));
@@ -33,6 +34,7 @@ var import_AdminMessages = __toESM(require("./lib/AdminMessages"));
 var import_ManufacturerSpecific = require("./lib/ManufacturerSpecific");
 process.setSourceMapsEnabled(true);
 const EXPECTED_PARSER_ERRORS = ["DATA_RECORD_CACHE_MISSING"];
+const CI_COMPACT_FRAME = 121;
 const INITIAL_RECONNECT_DELAY = 5e3;
 const MAX_RECONNECT_DELAY = 3e5;
 class WirelessMbus extends utils.Adapter {
@@ -59,6 +61,7 @@ class WirelessMbus extends utils.Adapter {
   blockList;
   createdDevices;
   deviceRegistry;
+  telegramVariants;
   manufacturerSpecificHandlers;
   stateValues;
   constructor(options = {}) {
@@ -80,7 +83,8 @@ class WirelessMbus extends utils.Adapter {
     this.parser = new import_wireless_mbus_parser.WirelessMbusParser();
     this.aesKeys = new import_AesKeys.default([], this.log);
     this.blockList = new import_BlockList.default([], {}, this.log);
-    this.adminMessages = new import_AdminMessages.default(this, this.aesKeys);
+    this.telegramVariants = new import_TelegramVariants.default([]);
+    this.adminMessages = new import_AdminMessages.default(this, this.aesKeys, this.telegramVariants);
     this.createdDevices = /* @__PURE__ */ new Set();
     this.deviceRegistry = new import_DeviceRegistry.default();
     this.manufacturerSpecificHandlers = {};
@@ -133,7 +137,8 @@ class WirelessMbus extends utils.Adapter {
     });
     this.aesKeys = new import_AesKeys.default(this.config.aeskeys, this.log);
     this.blockList = new import_BlockList.default(this.config.blacklist, { auto: this.config.autoBlocklist }, this.log);
-    this.adminMessages = new import_AdminMessages.default(this, this.aesKeys);
+    this.telegramVariants = new import_TelegramVariants.default(this.config.ignoredVariants);
+    this.adminMessages = new import_AdminMessages.default(this, this.aesKeys, this.telegramVariants);
     this.loadManufacturerSpecificDescriptions();
     await this.loadKnownDevices();
     await this.subscribeObjectsAsync("*");
@@ -178,7 +183,9 @@ class WirelessMbus extends utils.Adapter {
       this.log.warn(`Could not read the devices that already exist: ${error}`);
     }
     for (const device of devices) {
-      this.deviceRegistry.add(device._id.substring(this.namespace.length + 1), device.native);
+      const deviceId = device._id.substring(this.namespace.length + 1);
+      this.deviceRegistry.add(deviceId, device.native);
+      this.telegramVariants.add(deviceId, device.native);
     }
     this.log.debug(`Found ${devices.length} device(s) with an object tree`);
     this.parser = this.createParser();
@@ -380,8 +387,30 @@ class WirelessMbus extends utils.Adapter {
       this.log.debug(`Device has no object tree and is ignored: ${deviceId}`);
       return;
     }
+    if (this.telegramVariants.isIgnored(deviceId, parsed.dataRecordHeadersCrc)) {
+      this.log.debug(`Ignoring telegram variant ${(0, import_TelegramVariants.variantName)(parsed.dataRecordHeadersCrc)} of ${deviceId}`);
+      await this.noteTelegramVariant(deviceId, parsed, result);
+      return;
+    }
     await this.updateDevice(deviceId, result, parsed);
     await this.rememberDataRecordHeaders(deviceId, parsed);
+    await this.noteTelegramVariant(deviceId, parsed, result);
+  }
+  /**
+   * Count the telegram with the variant it belongs to - an ignored one as
+   * well, so that the admin UI shows it still arrives.
+   *
+   * @param deviceId
+   * @param parsed
+   * @param result
+   */
+  async noteTelegramVariant(deviceId, parsed, result) {
+    const frame = parsed.applicationLayer.ci === CI_COMPACT_FRAME ? "compact" : "full";
+    const states = result.dataRecord.map(import_DataStates.dataStateName);
+    const persist = this.telegramVariants.note(deviceId, parsed.dataRecordHeadersCrc, frame, states);
+    if (persist && this.deviceRegistry.has(deviceId)) {
+      await this.objectHelper.updateDeviceNative(deviceId, this.telegramVariants.nativeOf(deviceId));
+    }
   }
   /**
    * Keep the layout of the data records of a telegram with the device, so

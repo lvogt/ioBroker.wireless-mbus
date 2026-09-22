@@ -558,6 +558,62 @@ tests.integration(path.join(__dirname, '..'), {
             }).timeout(15000);
         });
 
+        suite('Test telegram variants', getHarness => {
+            // The Sensus meter of the data state tests, with a second layout
+            // that has a flow temperature where the first one has the volume
+            const telegram =
+                '2C446532821851582C067AE1000000046D1906D9180C1334120000426CBF1C4C1300000000326CFFFF01FD7300';
+            const other = telegram.replace('0C1334120000', '0C5B34120000');
+            const device = 'wireless-mbus.0.LSE-58511882';
+
+            let harness;
+            let ignored;
+            before(async () => {
+                harness = getHarness();
+
+                const crc = (await dataRecordHeadersOf(other)).crc;
+                ignored = crc.toString(16).toUpperCase().padStart(4, '0');
+
+                await prepareAdapter(harness, { ignoredVariants: [{ id: 'LSE-58511882', variant: ignored }] });
+                await harness.startAdapterAndWait();
+            });
+
+            it('keeps the variants of a device with it', async () => {
+                await sendTelegram({ frameType: 'A', containsCrc: false, data: telegram });
+                await delay(2000);
+
+                const obj = await getObject(harness, device);
+                expect(obj.native.telegramVariants).to.have.lengthOf(1);
+                expect(obj.native.telegramVariants[0]).to.include({
+                    crc: (await dataRecordHeadersOf(telegram)).crc,
+                    count: 1,
+                });
+                expect(obj.native.telegramVariants[0].frames).to.eql(['full']);
+            }).timeout(15000);
+
+            it('drops the telegrams of an ignored variant, but counts them', async () => {
+                await sendTelegram({ frameType: 'A', containsCrc: false, data: other });
+                await delay(2000);
+
+                const temperature = await getObject(harness, `${device}.data.2-0-VIF_FLOW_TEMP`);
+                expect(temperature, 'a value of the ignored variant was written').to.be.null;
+
+                const obj = await getObject(harness, device);
+                expect(obj.native.telegramVariants).to.have.lengthOf(2);
+            }).timeout(15000);
+
+            it('lists the variants for the admin UI', async () => {
+                const answer = await sendToAdapter(harness, 'listTelegramVariants', {
+                    ignored: [{ id: 'LSE-58511882', variant: ignored }],
+                });
+
+                expect(answer.result).to.equal('telegramVariantsListed');
+                const rows = answer.native.telegramVariants;
+                expect(rows).to.have.lengthOf(2);
+                expect(rows.find(row => row.variant === ignored).ignored).to.equal('✓');
+            }).timeout(10000);
+        });
+
         suite('Test compact telegrams', getHarness => {
             // A Kamstrup meter, whose compact telegram carries no more than a
             // signature of the record layout - the layout itself is the one of

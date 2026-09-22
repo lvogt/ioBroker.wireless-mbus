@@ -21,7 +21,8 @@ import * as utils from '@iobroker/adapter-core';
 import { WirelessMbusParser, guessDeviceId } from 'wireless-mbus-parser';
 import { getReceiver } from './lib/receiver';
 import ObjectHelper from './lib/ObjectHelper';
-import DataStates, { dataStateId } from './lib/DataStates';
+import DataStates, { dataStateId, dataStateName } from './lib/DataStates';
+import TelegramVariants, { variantName } from './lib/TelegramVariants';
 import DeviceRegistry from './lib/DeviceRegistry';
 import AesKeys from './lib/AesKeys';
 import BlockList from './lib/BlockList';
@@ -47,6 +48,10 @@ type Receiver = SerialDevice | TcpReceiver;
 // once a full frame with the same header signature has primed the parser's
 // cache, so the first one from every device always fails.
 const EXPECTED_PARSER_ERRORS = ['DATA_RECORD_CACHE_MISSING'];
+
+// The CI field of a compact telegram, which carries its data records without
+// their headers
+const CI_COMPACT_FRAME = 0x79;
 
 // Delays between two attempts to connect to the receiver (msec). The first
 // ones are quick, because the usual reason for a failed start is a telegram
@@ -78,6 +83,7 @@ class WirelessMbus extends utils.Adapter {
     blockList: BlockList;
     createdDevices: Set<string>;
     deviceRegistry: DeviceRegistry;
+    telegramVariants: TelegramVariants;
     manufacturerSpecificHandlers: Record<string, ManufacturerSpecificDataRecordHandler>;
     stateValues: Record<string, unknown>;
 
@@ -109,7 +115,8 @@ class WirelessMbus extends utils.Adapter {
         // they are replaced there with ones that know it.
         this.aesKeys = new AesKeys([], this.log);
         this.blockList = new BlockList([], {}, this.log);
-        this.adminMessages = new AdminMessages(this, this.aesKeys);
+        this.telegramVariants = new TelegramVariants([]);
+        this.adminMessages = new AdminMessages(this, this.aesKeys, this.telegramVariants);
 
         // Devices whose objects have been created or verified in this run
         this.createdDevices = new Set();
@@ -181,7 +188,8 @@ class WirelessMbus extends utils.Adapter {
 
         this.aesKeys = new AesKeys(this.config.aeskeys, this.log);
         this.blockList = new BlockList(this.config.blacklist, { auto: this.config.autoBlocklist }, this.log);
-        this.adminMessages = new AdminMessages(this, this.aesKeys);
+        this.telegramVariants = new TelegramVariants(this.config.ignoredVariants);
+        this.adminMessages = new AdminMessages(this, this.aesKeys, this.telegramVariants);
 
         this.loadManufacturerSpecificDescriptions();
         await this.loadKnownDevices();
@@ -238,7 +246,9 @@ class WirelessMbus extends utils.Adapter {
         }
 
         for (const device of devices) {
-            this.deviceRegistry.add(device._id.substring(this.namespace.length + 1), device.native);
+            const deviceId = device._id.substring(this.namespace.length + 1);
+            this.deviceRegistry.add(deviceId, device.native);
+            this.telegramVariants.add(deviceId, device.native);
         }
 
         this.log.debug(`Found ${devices.length} device(s) with an object tree`);
@@ -487,8 +497,37 @@ class WirelessMbus extends utils.Adapter {
             return;
         }
 
+        // Only known once the telegram is decoded: the crc of its record
+        // headers is what tells the variants of a meter apart
+        if (this.telegramVariants.isIgnored(deviceId, parsed.dataRecordHeadersCrc)) {
+            this.log.debug(`Ignoring telegram variant ${variantName(parsed.dataRecordHeadersCrc)} of ${deviceId}`);
+            await this.noteTelegramVariant(deviceId, parsed, result);
+            return;
+        }
+
         await this.updateDevice(deviceId, result, parsed);
         await this.rememberDataRecordHeaders(deviceId, parsed);
+        await this.noteTelegramVariant(deviceId, parsed, result);
+    }
+
+    /**
+     * Count the telegram with the variant it belongs to - an ignored one as
+     * well, so that the admin UI shows it still arrives.
+     *
+     * @param deviceId
+     * @param parsed
+     * @param result
+     */
+    async noteTelegramVariant(deviceId: string, parsed: ParserResultVerbose, result: LegacyResult): Promise<void> {
+        const frame = parsed.applicationLayer.ci === CI_COMPACT_FRAME ? 'compact' : 'full';
+        const states = result.dataRecord.map(dataStateName);
+        const persist = this.telegramVariants.note(deviceId, parsed.dataRecordHeadersCrc, frame, states);
+
+        // A device without an object tree has no object to keep them in: its
+        // only telegrams so far were ignored ones
+        if (persist && this.deviceRegistry.has(deviceId)) {
+            await this.objectHelper.updateDeviceNative(deviceId, this.telegramVariants.nativeOf(deviceId));
+        }
     }
 
     /**

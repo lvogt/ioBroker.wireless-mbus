@@ -17,6 +17,8 @@ import { WirelessMbusParser, guessDeviceId } from 'wireless-mbus-parser';
 import { listReceivers, getReceiver } from './receiver/index';
 import { buildHandlers, readDescriptions, EXAMPLE_DESCRIPTION } from './ManufacturerSpecific';
 import type AesKeys from './AesKeys';
+import type TelegramVariants from './TelegramVariants';
+import type { IgnoredVariantRow } from './TelegramVariants';
 import type { AesKeyRow } from './AesKeys';
 import type { ParserOptionsFull } from 'wireless-mbus-parser';
 
@@ -60,10 +62,31 @@ interface DescriptionsMessage {
 class AdminMessages {
     private readonly adapter: ioBroker.Adapter;
     private readonly aesKeys: AesKeys;
+    private readonly telegramVariants: TelegramVariants;
 
-    constructor(adapter: ioBroker.Adapter, aesKeys: AesKeys) {
+    constructor(adapter: ioBroker.Adapter, aesKeys: AesKeys, telegramVariants: TelegramVariants) {
         this.adapter = adapter;
         this.aesKeys = aesKeys;
+        this.telegramVariants = telegramVariants;
+    }
+
+    /**
+     * The telegram variants the instance has seen, for the table of the admin
+     * UI. Whether a variant is ignored goes by the list of the open form.
+     *
+     * @param message what the control sends along
+     * @param message.ignored the list of ignored variants of the open form
+     * @returns the answer of the control
+     */
+    listTelegramVariants(message?: { ignored?: IgnoredVariantRow[] }): SendToAnswer {
+        const rows = this.telegramVariants.rows(message && message.ignored);
+        const devices = new Set(rows.map(row => row.device)).size;
+
+        return {
+            native: { telegramVariants: rows },
+            result: rows.length ? 'telegramVariantsListed' : 'telegramVariantsNone',
+            args: [rows.length, devices],
+        };
     }
 
     /**
@@ -299,6 +322,8 @@ class AdminMessages {
                 return this.previewManufacturerSpecific(message);
             case 'importNeedsKey':
                 return this.importNeedsKeyNative(message);
+            case 'listTelegramVariants':
+                return this.listTelegramVariants(message);
             case 'needsKey':
                 // A Set does not survive the message box
                 return [...this.aesKeys.needsKey];

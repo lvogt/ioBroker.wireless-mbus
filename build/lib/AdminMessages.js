@@ -28,9 +28,28 @@ var import_ManufacturerSpecific = require("./ManufacturerSpecific");
 class AdminMessages {
   adapter;
   aesKeys;
-  constructor(adapter, aesKeys) {
+  telegramVariants;
+  constructor(adapter, aesKeys, telegramVariants) {
     this.adapter = adapter;
     this.aesKeys = aesKeys;
+    this.telegramVariants = telegramVariants;
+  }
+  /**
+   * The telegram variants the instance has seen, for the table of the admin
+   * UI. Whether a variant is ignored goes by the list of the open form.
+   *
+   * @param message what the control sends along
+   * @param message.ignored the list of ignored variants of the open form
+   * @returns the answer of the control
+   */
+  listTelegramVariants(message) {
+    const rows = this.telegramVariants.rows(message && message.ignored);
+    const devices = new Set(rows.map((row) => row.device)).size;
+    return {
+      native: { telegramVariants: rows },
+      result: rows.length ? "telegramVariantsListed" : "telegramVariantsNone",
+      args: [rows.length, devices]
+    };
   }
   /**
    * The serial ports as jsonConfig autocompleteSendTo options. The control
@@ -232,6 +251,8 @@ class AdminMessages {
         return this.previewManufacturerSpecific(message);
       case "importNeedsKey":
         return this.importNeedsKeyNative(message);
+      case "listTelegramVariants":
+        return this.listTelegramVariants(message);
       case "needsKey":
         return [...this.aesKeys.needsKey];
       default:

@@ -3,6 +3,7 @@
 const { expect } = require('chai');
 const AdminMessages = require('../src/lib/AdminMessages').default;
 const AesKeys = require('../src/lib/AesKeys').default;
+const TelegramVariants = require('../src/lib/TelegramVariants').default;
 const { KEY_PLACEHOLDER } = require('../src/lib/AesKeys');
 const { listReceivers } = require('../src/lib/receiver');
 
@@ -39,7 +40,7 @@ describe('Admin messages', () => {
     beforeEach(() => {
         adapter = fakeAdapter();
         aesKeys = new AesKeys([], silentLog);
-        messages = new AdminMessages(/** @type {any} */ (adapter), aesKeys);
+        messages = new AdminMessages(/** @type {any} */ (adapter), aesKeys, new TelegramVariants([]));
     });
 
     /** The answer of one command, once it has been sent. */
@@ -252,6 +253,31 @@ describe('Admin messages', () => {
             });
             expect(answer.result).to.equal('manufacturerSpecificReport');
             expect(answer.args[0]).to.contain('The descriptions are');
+        });
+    });
+
+    describe('the telegram variants', () => {
+        it('are listed into the table of the form', async () => {
+            const variants = new TelegramVariants([]);
+            variants.note('LSE-58511882', 0x3a7f, 'full', ['2-0-VIF_VOLUME']);
+            variants.note('LSE-58511882', 0x0042, 'full', ['2-0-VIF_FLOW_TEMP']);
+            messages = new AdminMessages(/** @type {any} */ (adapter), aesKeys, variants);
+
+            const answer = await ask('listTelegramVariants', { ignored: [{ id: 'LSE-58511882', variant: '0042' }] });
+
+            expect(answer.result).to.equal('telegramVariantsListed');
+            expect(answer.args).to.eql([2, 1]);
+            expect(answer.native.telegramVariants.map(row => [row.variant, row.ignored])).to.have.deep.members([
+                ['3A7F', ''],
+                ['0042', '✓'],
+            ]);
+        });
+
+        it('say so when there are none yet', async () => {
+            const answer = await ask('listTelegramVariants', {});
+
+            expect(answer.result).to.equal('telegramVariantsNone');
+            expect(answer.native).to.eql({ telegramVariants: [] });
         });
     });
 });

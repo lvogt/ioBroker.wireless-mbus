@@ -352,6 +352,157 @@
                 }
             }
         },
+        "tabVariants": {
+            "type": "panel",
+            "label": "Telegram variants",
+            "items": {
+                "variantsInfo": {
+                    "type": "staticText",
+                    "text": "telegramVariantsHint",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "listTelegramVariants": {
+                    "type": "sendTo",
+                    "label": "Show the telegram variants",
+                    "command": "listTelegramVariants",
+                    "jsonData": "{\"ignored\": ${JSON.stringify(data.ignoredVariants || [])}}",
+                    "useNative": true,
+                    "result": {
+                        "telegramVariantsListed": "telegramVariantsListed",
+                        "telegramVariantsNone": "telegramVariantsNone"
+                    },
+                    "variant": "outlined",
+                    "icon": "search",
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 4,
+                    "xl": 3
+                },
+                "telegramVariants": {
+                    "type": "table",
+                    "label": "Seen so far",
+                    "noDelete": true,
+                    "items": [
+                        {
+                            "type": "text",
+                            "attr": "device",
+                            "title": "Device address",
+                            "width": "14%",
+                            "readOnly": true,
+                            "filter": true,
+                            "sort": true
+                        },
+                        {
+                            "type": "text",
+                            "attr": "variant",
+                            "title": "Variant",
+                            "width": "8%",
+                            "readOnly": true
+                        },
+                        {
+                            "type": "text",
+                            "attr": "frames",
+                            "title": "Frames",
+                            "width": "10%",
+                            "readOnly": true
+                        },
+                        {
+                            "type": "text",
+                            "attr": "telegrams",
+                            "title": "Telegrams",
+                            "width": "8%",
+                            "readOnly": true
+                        },
+                        {
+                            "type": "text",
+                            "attr": "firstSeen",
+                            "title": "First seen",
+                            "width": "11%",
+                            "readOnly": true
+                        },
+                        {
+                            "type": "text",
+                            "attr": "lastSeen",
+                            "title": "Last seen",
+                            "width": "11%",
+                            "readOnly": true
+                        },
+                        {
+                            "type": "text",
+                            "attr": "states",
+                            "title": "States",
+                            "width": "32%",
+                            "readOnly": true
+                        },
+                        {
+                            "type": "text",
+                            "attr": "ignored",
+                            "title": "Ignored",
+                            "width": "6%",
+                            "readOnly": true
+                        }
+                    ],
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "ignoredHeader": {
+                    "type": "header",
+                    "text": "Ignored telegram variants",
+                    "size": 3,
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "ignoredInfo": {
+                    "type": "staticText",
+                    "text": "ignoredVariantsHint",
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "ignoredVariants": {
+                    "type": "table",
+                    "newLine": true,
+                    "items": [
+                        {
+                            "type": "text",
+                            "attr": "id",
+                            "title": "Device address",
+                            "width": "60%",
+                            "filter": true,
+                            "sort": true
+                        },
+                        {
+                            "type": "text",
+                            "attr": "variant",
+                            "title": "Variant",
+                            "width": "40%"
+                        }
+                    ],
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                }
+            }
+        },
         "tabBlocklist": {
             "type": "panel",
             "label": "Blocked Devices",

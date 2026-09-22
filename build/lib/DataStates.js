@@ -20,6 +20,7 @@ var DataStates_exports = {};
 __export(DataStates_exports, {
   dataStateId: () => dataStateId,
   dataStateMetadata: () => dataStateMetadata,
+  dataStateName: () => dataStateName,
   default: () => DataStates_default,
   differences: () => differences,
   recordIdentity: () => recordIdentity
@@ -40,8 +41,11 @@ const UNITS_TO_ROLES = {
 };
 const FUNCTION_FIELDS = ["instantaneous value", "maximum value", "minimum value", "value during error state"];
 const METADATA_KEYS = ["name", "role", "unit"];
+function dataStateName(record) {
+  return `${record.number}-${record.storageNo}-${record.type}`;
+}
 function dataStateId(deviceId, record) {
-  return `${deviceId}.data.${record.number}-${record.storageNo}-${record.type}`;
+  return `${deviceId}.data.${dataStateName(record)}`;
 }
 function recordIdentity(record, parsed) {
   return {
@@ -271,6 +275,7 @@ var DataStates_default = DataStates;
 0 && (module.exports = {
   dataStateId,
   dataStateMetadata,
+  dataStateName,
   differences,
   recordIdentity
 });
