@@ -32,22 +32,17 @@ function copyMocks(harness) {
 }
 
 async function prepareAdapter(harness, native = {}) {
-    try {
-        await harness.objects.getObject('system.adapter.wireless-mbus.0', async (err, obj) => {
-            obj.native.deviceType = 'TcpReceiver.js';
-            obj.native.serialPort = port;
-            obj.native.aeskeys = [
-                { id: 'ELS-1234567', key: 'FFF102030405060708090A0B0C0D0E0F' },
-                { id: 'ELS-12345678', key: '000102030405060708090A0B0C0D0E0F' },
-                { id: 'RAD-112233', key: '000102030405060708090A0B0C0D0E0F' },
-            ];
-            obj.native.blacklist = [{ id: 'SEN-20222542' }];
-            Object.assign(obj.native, native);
-            harness.objects.setObject(obj._id, obj);
-        });
-    } catch (e) {
-        console.dir(e);
-    }
+    const obj = await getObject(harness, 'system.adapter.wireless-mbus.0');
+    obj.native.deviceType = 'TcpReceiver.js';
+    obj.native.serialPort = port;
+    obj.native.aeskeys = [
+        { id: 'ELS-1234567', key: 'FFF102030405060708090A0B0C0D0E0F' },
+        { id: 'ELS-12345678', key: '000102030405060708090A0B0C0D0E0F' },
+        { id: 'RAD-112233', key: '000102030405060708090A0B0C0D0E0F' },
+    ];
+    obj.native.blacklist = [{ id: 'SEN-20222542' }];
+    Object.assign(obj.native, native);
+    await setObject(harness, obj);
 }
 
 /** A device object as an earlier run of the adapter would have left it behind */
@@ -71,42 +66,39 @@ async function dataRecordHeadersOf(telegram) {
 }
 
 async function prepareAdapterWithMock(harness, mockType, forceFail) {
-    try {
-        await harness.objects.getObject('system.adapter.wireless-mbus.0', async (err, obj) => {
-            const classFile = fs.readFileSync(`${harness.testAdapterDir}/build/lib/receiver/SerialDevice.js`, 'utf-8');
-            // The built file requires "serialport" with double quotes, where
-            // the source had single ones. Relative to
-            // build/lib/receiver/SerialDevice.js, the mocks copied into the
-            // adapter root are three levels up.
-            //
-            // A mock that is already injected is matched as well: the file
-            // stays patched for the whole run, so the suites that follow would
-            // otherwise find nothing to replace and be left with the mock of
-            // the first one.
-            const patchedClass = classFile.replace(
-                /require\((["'])(?:serialport|(?:\.\.\/){3}test\/receiver\/\w+DeviceMock)\1\)/,
-                `require('../../../test/receiver/${mockType}DeviceMock')`,
-            );
-            if (patchedClass === classFile) {
-                throw new Error('Could not inject the device mock - no require of serialport or of a mock was found');
-            }
-            fs.writeFileSync(`${harness.testAdapterDir}/build/lib/receiver/SerialDevice.js`, patchedClass);
-
-            if (forceFail) {
-                if (mockType === 'Cul') {
-                    obj.native.deviceType = 'amber';
-                } else {
-                    obj.native.deviceType = 'cul';
-                }
-            } else {
-                obj.native.deviceType = mockType.toLowerCase();
-            }
-            obj.native.serialPort = '/dev/mockPort';
-            harness.objects.setObject(obj._id, obj);
-        });
-    } catch (e) {
-        console.dir(e);
+    const obj = await getObject(harness, 'system.adapter.wireless-mbus.0');
+    const classFile = fs.readFileSync(`${harness.testAdapterDir}/build/lib/receiver/SerialDevice.js`, 'utf-8');
+    // The built file requires "serialport" with double quotes, where
+    // the source had single ones. Relative to
+    // build/lib/receiver/SerialDevice.js, the mocks copied into the
+    // adapter root are three levels up.
+    //
+    // A mock that is already injected is matched as well: the file
+    // stays patched for the whole run, so the suites that follow would
+    // otherwise find nothing to replace and be left with the mock of
+    // the first one. Whether it matched has to be asked of the pattern:
+    // a suite that injects the mock that is already there leaves the file
+    // as it was, which is not a failure.
+    const serialPortRequire = /require\((["'])(?:serialport|(?:\.\.\/){3}test\/receiver\/\w+DeviceMock)\1\)/;
+    if (!serialPortRequire.test(classFile)) {
+        throw new Error('Could not inject the device mock - no require of serialport or of a mock was found');
     }
+    fs.writeFileSync(
+        `${harness.testAdapterDir}/build/lib/receiver/SerialDevice.js`,
+        classFile.replace(serialPortRequire, `require('../../../test/receiver/${mockType}DeviceMock')`),
+    );
+
+    if (forceFail) {
+        if (mockType === 'Cul') {
+            obj.native.deviceType = 'amber';
+        } else {
+            obj.native.deviceType = 'cul';
+        }
+    } else {
+        obj.native.deviceType = mockType.toLowerCase();
+    }
+    obj.native.serialPort = '/dev/mockPort';
+    await setObject(harness, obj);
 }
 
 // harness.objects/states use node-style callbacks. Wrapping them here keeps
@@ -115,6 +107,17 @@ async function prepareAdapterWithMock(harness, mockType, forceFail) {
 function getObject(harness, id) {
     return new Promise((resolve, reject) => {
         harness.objects.getObject(id, (err, obj) => (err ? reject(new Error(`Error return ${err}`)) : resolve(obj)));
+    });
+}
+
+// The adapter is started right after the configuration is written, so the
+// write has to be done by then - an unawaited setObject() let the adapter start
+// with the configuration of the suite before, whenever it lost that race.
+function setObject(harness, obj) {
+    return new Promise((resolve, reject) => {
+        harness.objects.setObject(obj._id, obj, err =>
+            err ? reject(new Error(`Error return ${err}`)) : resolve(true),
+        );
     });
 }
 
