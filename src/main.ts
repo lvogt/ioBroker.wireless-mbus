@@ -21,6 +21,7 @@ import * as utils from '@iobroker/adapter-core';
 import { WirelessMbusParser, guessDeviceId } from 'wireless-mbus-parser';
 import { getReceiver } from './lib/receiver';
 import ObjectHelper from './lib/ObjectHelper';
+import DataStates, { dataStateId } from './lib/DataStates';
 import DeviceRegistry from './lib/DeviceRegistry';
 import AesKeys from './lib/AesKeys';
 import BlockList from './lib/BlockList';
@@ -55,6 +56,7 @@ const MAX_RECONNECT_DELAY = 300000;
 
 class WirelessMbus extends utils.Adapter {
     objectHelper: ObjectHelper;
+    dataStates: DataStates;
     adminMessages: AdminMessages;
     /**
      * Whether the receiver is connected - not to be confused with the
@@ -89,6 +91,7 @@ class WirelessMbus extends utils.Adapter {
         this.on('unload', this.onUnload.bind(this));
 
         this.objectHelper = new ObjectHelper(this);
+        this.dataStates = new DataStates(this, this.objectHelper);
 
         this.receiverConnected = undefined;
         this.receiver = null;
@@ -219,7 +222,8 @@ class WirelessMbus extends utils.Adapter {
      *
      * They are what "ignoreUnknownDevices" decides by, and their objects are
      * the only place where the record layouts of their telegrams survive a
-     * restart - so this has to happen before the receiver is opened.
+     * restart - so this has to happen before the receiver is opened. The same
+     * goes for the data states, which say what record each of them stands for.
      */
     async loadKnownDevices(): Promise<void> {
         let devices: ioBroker.DeviceObject[] = [];
@@ -236,6 +240,8 @@ class WirelessMbus extends utils.Adapter {
 
         this.log.debug(`Found ${devices.length} device(s) with an object tree`);
         this.parser = this.createParser();
+
+        await this.dataStates.load();
     }
 
     /**
@@ -478,7 +484,7 @@ class WirelessMbus extends utils.Adapter {
             return;
         }
 
-        await this.updateDevice(deviceId, result);
+        await this.updateDevice(deviceId, result, parsed);
         await this.rememberDataRecordHeaders(deviceId, parsed);
     }
 
@@ -539,12 +545,12 @@ class WirelessMbus extends utils.Adapter {
         this.aesKeys.checkWrongKey(id, name);
     }
 
-    async updateDevice(deviceId: string, result: LegacyResult): Promise<void> {
+    async updateDevice(deviceId: string, result: LegacyResult, parsed: ParserResultVerbose): Promise<void> {
         if (!this.createdDevices.has(deviceId)) {
             await this.createDeviceObjects(deviceId, result);
         }
 
-        await this.updateDeviceStates(deviceId, result);
+        await this.updateDeviceStates(deviceId, result, parsed);
     }
 
     async createDeviceObjects(deviceId: string, data: LegacyResult): Promise<void> {
@@ -559,15 +565,18 @@ class WirelessMbus extends utils.Adapter {
 
         await this.objectHelper.createInfoState(deviceId, 'Updated');
 
-        for (const item of data.dataRecord) {
-            await this.objectHelper.createDataState(deviceId, item);
-        }
-
         this.createdDevices.add(deviceId);
         this.deviceRegistry.add(deviceId);
     }
 
-    async updateDeviceStates(deviceId: string, data: LegacyResult): Promise<void> {
+    /**
+     * @param deviceId
+     * @param data
+     * @param parsed the same telegram as the parser decoded it: the legacy
+     * result has the n-th of its records at position n - 1 of the data records
+     * there, and the values decoded from manufacturer specific data behind them
+     */
+    async updateDeviceStates(deviceId: string, data: LegacyResult, parsed: ParserResultVerbose): Promise<void> {
         this.log.debug(`Updating device: ${deviceId}`);
         for (const key of Object.keys(data.deviceInformation)) {
             const name = `${deviceId}.info.${key}`;
@@ -583,7 +592,14 @@ class WirelessMbus extends utils.Adapter {
         await this.objectHelper.updateState(`${deviceId}.info.Updated`, Math.floor(Date.now() / 1000));
 
         for (const item of data.dataRecord) {
-            const name = `${deviceId}.data.${item.number}-${item.storageNo}-${item.type}`;
+            // The state of a record is checked with every telegram, not only
+            // when the device is created: a meter can send records that its
+            // first telegram did not have
+            if (!(await this.dataStates.verify(deviceId, item, parsed.dataRecords[item.number - 1]))) {
+                continue;
+            }
+
+            const name = dataStateId(deviceId, item);
             if (
                 this.config.alwaysUpdate ||
                 typeof this.stateValues[name] === 'undefined' ||

@@ -23,22 +23,8 @@ __export(ObjectHelper_exports, {
 module.exports = __toCommonJS(ObjectHelper_exports);
 class ObjectHelper {
   adapter;
-  units2roles;
   constructor(adapter) {
     this.adapter = adapter;
-    this.units2roles = {
-      "value.power.consumption": ["Wh", "kWh", "MWh", "GWh", "J", "kJ", "MJ", "GJ"],
-      "value.power": ["W", "kW", "MW", "J/h", "GJ/h"],
-      "value.temperature": ["\xB0C", "K", "\xB0F"],
-      "value.volume": ["m\xB3", "feet\xB3"],
-      "value.duration": ["s", "min", "h", "d", "months", "years"],
-      "value.price": ["\u20AC", "$", "EUR", "USD"],
-      "value.mass": ["kg", "t"],
-      "value.flow": ["m\xB3/h", "m\xB3/min", "m\xB3/s", "kg/h"],
-      "value.pressure": ["bar"],
-      "value.current": ["A"],
-      "value.voltage": ["V"]
-    };
   }
   async createObject(name, obj) {
     try {
@@ -70,6 +56,13 @@ class ObjectHelper {
       this.adapter.log.error(`Error updating device object ${deviceId}: ${err}`);
     }
   }
+  async updateObject(name, changes) {
+    try {
+      await this.adapter.extendObjectAsync(name, changes);
+    } catch (err) {
+      this.adapter.log.error(`Error updating state object ${name}: ${err}`);
+    }
+  }
   async createDeviceOrChannel(type, name) {
     await this.createObject(name, {
       type,
@@ -91,33 +84,6 @@ class ObjectHelper {
       },
       native: {
         id: `.info.${name}`
-      }
-    });
-  }
-  async createDataState(deviceId, item) {
-    const id = `.data.${item.number}-${item.storageNo}-${item.type}`;
-    const unit = this.adapter.config.forcekWh && (item.unit == "Wh" || item.unit == "J") ? "kWh" : item.unit;
-    const role = item.type.includes("TIME_POINT") ? "date" : Object.keys(this.units2roles).find((k) => this.units2roles[k].includes(item.unit)) || "value";
-    let name;
-    if (item.tariff) {
-      name = `${item.description} (Tariff ${item.tariff}; ${item.functionFieldText})`;
-    } else {
-      name = `${item.description} (${item.functionFieldText})`;
-    }
-    await this.createObject(`${deviceId}${id}`, {
-      type: "state",
-      common: {
-        name,
-        role,
-        type: "mixed",
-        read: true,
-        write: false,
-        unit
-      },
-      native: {
-        id,
-        StorageNumber: item.storageNo,
-        Tariff: item.tariff
       }
     });
   }

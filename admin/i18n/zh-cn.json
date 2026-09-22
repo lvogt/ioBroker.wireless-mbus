@@ -9,6 +9,7 @@
     "Device address": "设备地址",
     "Force energy units to kWh": "强制能量单位为 kWh",
     "Insert an example": "插入示例",
+    "Keep name, unit and role of the states up to date": "保持状态的名称、单位和角色为最新",
     "Manufacturer specific data": "制造商特定数据",
     "Name": "名称",
     "Only handle devices that already have an object tree": "仅处理已有对象树的设备",
@@ -42,6 +43,7 @@
     "serialBaudRate": "串口波特率",
     "serialPort": "串行端口",
     "serialPortHelp": "选择一个端口或键入 1 - 对于可通过网络访问的串行设备，请使用 tcp://host:port",
+    "updateStateObjectsHelp": "数据状态的名称、单位和角色跟随解码后的电报，例如在解析器更新后或切换“强制能量单位为 kWh”时。关闭此项可保留您自己修改的名称。",
     "wMBus Mode": "总线模式",
     "wMBus Receiver": "wMBus 接收器"
 }

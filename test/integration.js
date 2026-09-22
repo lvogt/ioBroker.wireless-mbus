@@ -465,6 +465,76 @@ tests.integration(path.join(__dirname, '..'), {
             }).timeout(30000);
         });
 
+        suite('Test data state objects', getHarness => {
+            // A Sensus water meter whose second record is the current volume.
+            // The two others are derived from it: one has a maximum there
+            // instead, the other a flow temperature, which is a state of its
+            // own.
+            const telegram =
+                '2C446532821851582C067AE1000000046D1906D9180C1334120000426CBF1C4C1300000000326CFFFF01FD7300';
+            const maximum = telegram.replace('0C1334120000', '1C1378560000');
+            const flowTemperature = telegram.replace('0C1334120000', '0C5B34120000');
+            const volumeId = 'wireless-mbus.0.LSE-58511882.data.2-0-VIF_VOLUME';
+
+            let harness;
+            before(async () => {
+                harness = getHarness();
+
+                await prepareAdapter(harness);
+                // the volume as a version of the adapter before the check
+                // left it behind: no record of its own, and a wrong unit
+                await createDeviceObject(harness, 'LSE-58511882');
+                await setObject(harness, {
+                    _id: volumeId,
+                    type: 'state',
+                    common: { name: 'Volume', role: 'value', type: 'mixed', read: true, write: false, unit: 'l' },
+                    native: { id: '.data.2-0-VIF_VOLUME', StorageNumber: 0, Tariff: 0 },
+                });
+                await harness.startAdapterAndWait();
+            });
+
+            it('takes the first record for the one an existing state stands for', async () => {
+                await sendTelegram({ frameType: 'A', containsCrc: false, data: telegram });
+                await delay(2000);
+
+                const obj = await getObject(harness, volumeId);
+                expect(obj.native.record).to.eql({
+                    storageNo: 0,
+                    tariff: 0,
+                    deviceUnit: 0,
+                    functionField: 0,
+                    vifExtensions: [],
+                    manufacturerSpecific: false,
+                });
+                expect(obj.common.unit).to.equal('m³');
+                expect(obj.common.name).to.equal('Volume (Instantaneous value)');
+
+                const state = await getState(harness, volumeId);
+                expect(state.val).to.be.closeTo(1.234, 0.001);
+            }).timeout(15000);
+
+            it('skips the value of a different record at the same position', async () => {
+                await sendTelegram({ frameType: 'A', containsCrc: false, data: maximum });
+                await delay(2000);
+
+                const state = await getState(harness, volumeId);
+                expect(state.val, 'the maximum was written to the state of the volume').to.be.closeTo(1.234, 0.001);
+            }).timeout(15000);
+
+            it('creates the state of a record the first telegram did not have', async () => {
+                await sendTelegram({ frameType: 'A', containsCrc: false, data: flowTemperature });
+                await delay(2000);
+
+                const temperatureId = 'wireless-mbus.0.LSE-58511882.data.2-0-VIF_FLOW_TEMP';
+                const obj = await getObject(harness, temperatureId);
+                expect(obj, 'the state was not created').to.not.be.null;
+                expect(obj.common.unit).to.equal('°C');
+
+                const state = await getState(harness, temperatureId);
+                expect(state.val).to.equal(1234);
+            }).timeout(15000);
+        });
+
         suite('Test compact telegrams', getHarness => {
             // A Kamstrup meter, whose compact telegram carries no more than a
             // signature of the record layout - the layout itself is the one of

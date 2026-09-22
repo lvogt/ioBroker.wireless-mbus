@@ -9,6 +9,7 @@
     "Device address": "Apparaatadres",
     "Force energy units to kWh": "Forceer energie-eenheden naar kWh",
     "Insert an example": "Voorbeeld invoegen",
+    "Keep name, unit and role of the states up to date": "Naam, eenheid en rol van de states actueel houden",
     "Manufacturer specific data": "Fabrikantspecifieke gegevens",
     "Name": "Naam",
     "Only handle devices that already have an object tree": "Alleen apparaten verwerken die al een objectboom hebben",
@@ -42,6 +43,7 @@
     "serialBaudRate": "Seriële baudrate",
     "serialPort": "Seriële poort",
     "serialPortHelp": "Selecteer een poort of typ er een in - voor een serieel apparaat dat via het netwerk bereikbaar is, gebruikt u tcp://host:port",
+    "updateStateObjectsHelp": "Naam, eenheid en rol van een datastate volgen het gedecodeerde telegram, bijvoorbeeld na een update van de parser of wanneer \"Forceer energie-eenheden naar kWh\" wordt omgeschakeld. Schakel dit uit om zelf gewijzigde namen te behouden.",
     "wMBus Mode": "wMBus-modus",
     "wMBus Receiver": "wMBus-ontvanger"
 }

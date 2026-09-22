@@ -25,6 +25,7 @@ var utils = __toESM(require("@iobroker/adapter-core"));
 var import_wireless_mbus_parser = require("wireless-mbus-parser");
 var import_receiver = require("./lib/receiver");
 var import_ObjectHelper = __toESM(require("./lib/ObjectHelper"));
+var import_DataStates = __toESM(require("./lib/DataStates"));
 var import_DeviceRegistry = __toESM(require("./lib/DeviceRegistry"));
 var import_AesKeys = __toESM(require("./lib/AesKeys"));
 var import_BlockList = __toESM(require("./lib/BlockList"));
@@ -36,6 +37,7 @@ const INITIAL_RECONNECT_DELAY = 5e3;
 const MAX_RECONNECT_DELAY = 3e5;
 class WirelessMbus extends utils.Adapter {
   objectHelper;
+  dataStates;
   adminMessages;
   /**
    * Whether the receiver is connected - not to be confused with the
@@ -68,6 +70,7 @@ class WirelessMbus extends utils.Adapter {
     this.on("message", this.onMessage.bind(this));
     this.on("unload", this.onUnload.bind(this));
     this.objectHelper = new import_ObjectHelper.default(this);
+    this.dataStates = new import_DataStates.default(this, this.objectHelper);
     this.receiverConnected = void 0;
     this.receiver = null;
     this.reconnectTimeout = null;
@@ -162,7 +165,8 @@ class WirelessMbus extends utils.Adapter {
    *
    * They are what "ignoreUnknownDevices" decides by, and their objects are
    * the only place where the record layouts of their telegrams survive a
-   * restart - so this has to happen before the receiver is opened.
+   * restart - so this has to happen before the receiver is opened. The same
+   * goes for the data states, which say what record each of them stands for.
    */
   async loadKnownDevices() {
     let devices = [];
@@ -176,6 +180,7 @@ class WirelessMbus extends utils.Adapter {
     }
     this.log.debug(`Found ${devices.length} device(s) with an object tree`);
     this.parser = this.createParser();
+    await this.dataStates.load();
   }
   /**
    * A parser that knows the record layouts of all known devices, so that a
@@ -373,7 +378,7 @@ class WirelessMbus extends utils.Adapter {
       this.log.debug(`Device has no object tree and is ignored: ${deviceId}`);
       return;
     }
-    await this.updateDevice(deviceId, result);
+    await this.updateDevice(deviceId, result, parsed);
     await this.rememberDataRecordHeaders(deviceId, parsed);
   }
   /**
@@ -408,11 +413,11 @@ class WirelessMbus extends utils.Adapter {
     await this.setState("info.rawdata", data.rawData.toString("hex"), true);
     this.aesKeys.checkWrongKey(id, name);
   }
-  async updateDevice(deviceId, result) {
+  async updateDevice(deviceId, result, parsed) {
     if (!this.createdDevices.has(deviceId)) {
       await this.createDeviceObjects(deviceId, result);
     }
-    await this.updateDeviceStates(deviceId, result);
+    await this.updateDeviceStates(deviceId, result, parsed);
   }
   async createDeviceObjects(deviceId, data) {
     this.log.debug(`Creating device: ${deviceId}`);
@@ -423,13 +428,17 @@ class WirelessMbus extends utils.Adapter {
       await this.objectHelper.createInfoState(deviceId, key);
     }
     await this.objectHelper.createInfoState(deviceId, "Updated");
-    for (const item of data.dataRecord) {
-      await this.objectHelper.createDataState(deviceId, item);
-    }
     this.createdDevices.add(deviceId);
     this.deviceRegistry.add(deviceId);
   }
-  async updateDeviceStates(deviceId, data) {
+  /**
+   * @param deviceId
+   * @param data
+   * @param parsed the same telegram as the parser decoded it: the legacy
+   * result has the n-th of its records at position n - 1 of the data records
+   * there, and the values decoded from manufacturer specific data behind them
+   */
+  async updateDeviceStates(deviceId, data, parsed) {
     this.log.debug(`Updating device: ${deviceId}`);
     for (const key of Object.keys(data.deviceInformation)) {
       const name = `${deviceId}.info.${key}`;
@@ -440,7 +449,10 @@ class WirelessMbus extends utils.Adapter {
     }
     await this.objectHelper.updateState(`${deviceId}.info.Updated`, Math.floor(Date.now() / 1e3));
     for (const item of data.dataRecord) {
-      const name = `${deviceId}.data.${item.number}-${item.storageNo}-${item.type}`;
+      if (!await this.dataStates.verify(deviceId, item, parsed.dataRecords[item.number - 1])) {
+        continue;
+      }
+      const name = (0, import_DataStates.dataStateId)(deviceId, item);
       if (this.config.alwaysUpdate || typeof this.stateValues[name] === "undefined" || this.stateValues[name] !== item.value) {
         this.stateValues[name] = item.value;
         let val = item.value;
