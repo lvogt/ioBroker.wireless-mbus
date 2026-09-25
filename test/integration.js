@@ -11,6 +11,11 @@ const net = require('node:net');
 const port = Number(process.env.WMBUS_TEST_PORT) || 5000;
 const culPort = port + 99;
 
+// A hook without a timeout of its own gets mocha's 2 seconds, and starting the
+// adapter takes longer than that on a slow runner - macOS on GitHub Actions
+// needed almost three. The same the harness gives its own hooks.
+const ADAPTER_START_TIMEOUT = 30000;
+
 function copyMocks(harness) {
     // The published package does not contain test/, so the mocks have to be
     // copied into the installed adapter before the receivers can use them.
@@ -288,7 +293,8 @@ tests.integration(path.join(__dirname, '..'), {
 
         suite('Test sendTo()', getHarness => {
             let harness;
-            before(async () => {
+            before(async function () {
+                this.timeout(ADAPTER_START_TIMEOUT);
                 harness = getHarness();
                 await prepareAdapter(harness);
                 await harness.startAdapterAndWait();
@@ -352,7 +358,8 @@ tests.integration(path.join(__dirname, '..'), {
 
         suite('Test telegrams', getHarness => {
             let harness;
-            before(async () => {
+            before(async function () {
+                this.timeout(ADAPTER_START_TIMEOUT);
                 harness = getHarness();
                 await prepareAdapter(harness);
                 await harness.startAdapterAndWait();
@@ -523,7 +530,8 @@ tests.integration(path.join(__dirname, '..'), {
             });
 
             let harness;
-            before(async () => {
+            before(async function () {
+                this.timeout(ADAPTER_START_TIMEOUT);
                 harness = getHarness();
                 await prepareAdapter(harness, { manufacturerSpecific: descriptions });
                 await harness.startAdapterAndWait();
@@ -623,7 +631,8 @@ tests.integration(path.join(__dirname, '..'), {
 
         suite('Other tests', getHarness => {
             let harness;
-            before(async () => {
+            before(async function () {
+                this.timeout(ADAPTER_START_TIMEOUT);
                 harness = getHarness();
                 await prepareAdapter(harness);
                 await harness.startAdapterAndWait();
