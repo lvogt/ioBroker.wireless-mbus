@@ -477,7 +477,8 @@ tests.integration(path.join(__dirname, '..'), {
             const volumeId = 'wireless-mbus.0.LSE-58511882.data.2-0-VIF_VOLUME';
 
             let harness;
-            before(async () => {
+            before(async function () {
+                this.timeout(ADAPTER_START_TIMEOUT);
                 harness = getHarness();
 
                 await prepareAdapter(harness);
