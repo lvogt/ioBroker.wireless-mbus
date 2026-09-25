@@ -568,7 +568,8 @@ tests.integration(path.join(__dirname, '..'), {
 
             let harness;
             let ignored;
-            before(async () => {
+            before(async function () {
+                this.timeout(ADAPTER_START_TIMEOUT);
                 harness = getHarness();
 
                 const crc = (await dataRecordHeadersOf(other)).crc;
