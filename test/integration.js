@@ -229,7 +229,7 @@ tests.integration(path.join(__dirname, '..'), {
         });
 
         suite('Test receiver with mocks', getHarness => {
-            it('Test receiver fails', async () => {
+            it(`Test receiver fails (${testedReceiver} mock)`, async () => {
                 const harness = getHarness();
 
                 await prepareAdapterWithMock(harness, testedReceiver, true);
