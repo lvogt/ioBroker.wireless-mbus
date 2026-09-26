@@ -18,7 +18,28 @@ local TCP port. Point the instance at it:
 ```bash
 cd .dev-server/default
 ./iob object extend system.adapter.wireless-mbus.0 '{"native":{"deviceType":"tcp","serialPort":"5100"}}'
-./iob restart wireless-mbus.0
+./iob object get system.adapter.wireless-mbus.0 | grep -E '"(deviceType|serialPort)"'
+```
+
+The change can reach the objects database noticeably later than the command returns, so restart
+the adapter only once the second command shows the new values. Under `dev-server watch` the dev
+server runs the adapter itself, and it restarts it when a file under `build/` changes:
+
+```bash
+touch build/main.js    # from the adapter directory
+```
+
+The dev server is also meant to restart the adapter when the instance configuration changes, but
+that does not always happen - after a save in the admin UI as well. If the log shows no new start of
+the adapter, touch the file.
+
+Do not use `./iob restart wireless-mbus.0` under `dev-server watch`. The dev server keeps the instance
+disabled, so that js-controller leaves the adapter to it; `iob restart` enables it, and js-controller
+starts a second copy, which ends with `ADAPTER_ALREADY_RUNNING` and is started again every 30
+seconds. If that has happened, disable the instance again:
+
+```bash
+./iob object extend system.adapter.wireless-mbus.0 '{"common":{"enabled":false}}'
 ```
 
 Then, from the adapter directory:
