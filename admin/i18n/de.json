@@ -34,7 +34,7 @@
     "Update unchanged states": "Unveränderte Werte aktualisieren",
     "Value": "Wert",
     "Variant": "Variante",
-    "What it would write": "Was geschrieben würde",
+    "What it would write": "Was ausgegeben würde",
     "aesKeysHint": "Die Geräteadresse ist der Herstellercode plus die Geräte-ID, z.B. AAA-12345678. Ein Schlüssel besteht entweder aus 32 Hexadezimalzeichen oder einem 16-stelligen Klartextschlüssel.",
     "blocklistHint": "Telegramme der aufgeführten Geräte werden komplett ignoriert. Geben Sie die Geräteadresse ein, z.B. AAA-12345678.",
     "ignoreUnknownDevicesHelp": "Telegramme von Geräten ohne Objektbaum werden ignoriert, es werden also keine neuen Geräte angelegt. Ein aus dem Objektbaum gelöschtes Gerät bleibt damit verschwunden.",
