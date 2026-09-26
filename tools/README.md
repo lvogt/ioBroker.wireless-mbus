@@ -10,6 +10,24 @@ npx dev-server watch     # js-controller, the admin UI and the adapter, restarte
 `dev-server run` starts everything **except** the adapter, which is what you want for admin UI
 work; `watch` is what you want here. The admin URL is printed on start (http://localhost:8081).
 
+## A profile with devices
+
+A fresh profile has no devices. With `dev-server watch` running, this fills it:
+
+```bash
+node tools/seed-dev-server.js
+```
+
+It points the instance at the TCP receiver below (port 5100), adds the AES key the `encrypted` sample
+needs, restarts the adapter if that changed anything, and sends the samples: the Sensus meter
+`LSE-58511882` in three layouts, the volume, the encrypted meter, the Itron smoke detector and the one
+with an unknown key. It can run any number of times - what is configured stays as it is, and the
+telegrams arrive again. `--profile` picks another dev-server profile, `--port` another port.
+
+The devices are created by the adapter as it is checked out, which is the point: a backup of a
+populated profile (`dev-server backup`, `dev-server setup --backupFile`) would bring back objects as an
+older version created them.
+
 ## Feeding telegrams over TCP
 
 The package contains a receiver that the admin UI does not offer: it takes telegrams as JSON on a
@@ -81,6 +99,8 @@ of that and hands the telegram straight to the parser.
 | name | what it is |
 | --- | --- |
 | `plain` | LSE-58511882, six data records, decodes without a key |
+| `plain-maximum` | LSE-58511882 again, with a maximum volume where `plain` has the current one: another record under the same state id |
+| `plain-other` | LSE-58511882 again, with a fabrication number, a flow and a return temperature in place of three records of `plain` |
 | `volume` | CEN-12345678, a volume in m³, frame type B with CRCs |
 | `encrypted` | ELS-12345678, needs the key `000102030405060708090A0B0C0D0E0F` in the AES key list |
 | `itron` | ITW-12345678, an Itron smoke detector - the 26 values its manufacturer specific record holds |
