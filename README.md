@@ -50,7 +50,7 @@ From version 0.9.0 on, the adapter also supports to connect to serial devices re
 * **Force energy units to kWh**: All energy units (Wh and J) will be converted to kWh. (default: off)
 * **Temporarily block device after consecutive failures**: If 10 consecutive telegrams of the same device are not parsed successfully the device will be ignored until adapter restart (default: on)
 * **Only handle devices that already have an object tree**: Telegrams of devices that do not have an object tree yet are ignored, so no new devices are created - useful once every meter you care about has been set up. Telegrams that cannot be decoded at all are ignored just as well: they do not add a device to the AES key list and they are not written to `info.rawdata`. The automatic block list still counts them, so that an unwanted device stops costing a decoding attempt - it just does not say so in the log. A device you delete from the object tree is gone for good right away. The devices are looked up when the adapter starts, so a device that should be picked up again needs a restart. (default: off)
-* **Keep name, unit and role of the states up to date**: Name, unit and role of a data state follow the decoded telegram, for example after an update of the parser or when "Force energy units to kWh" is switched. Switch it off to keep names you changed yourself. (default: on)
+* **Overwrite name, unit and role of the data states**: Name, unit and role of a data state follow the decoded telegram - after an update of the parser, or when "Force energy units to kWh" is switched - but only as long as they are what the adapter wrote itself. A name you gave a state, or a role you changed for another adapter, stays as it is, and so does everything of a state an earlier version of the adapter created. Switch this on to set every data state back to what the adapter would create it with at its next telegram, your own names included, and off again once that has happened. (default: off)
 
 Every data state remembers which data record it was created for - its storage number, tariff, sub-unit, function field (instantaneous, maximum, minimum, error state) and VIF extensions. The id of a state only names the position of a record in the telegram, its storage number and its type, so a meter that sends its records in different orders, or telegrams of different layouts, can put another record at the same id. Such a value is skipped instead of being written to a state that describes a different record, and the log says so once per state. A state created by an earlier version of the adapter takes the first record that arrives after the update as the one it stands for.
 
@@ -205,11 +205,11 @@ battery life of a PRIOS meter is reported in months rather than in years.
 -->
 ### **WORK IN PROGRESS**
 * (ChL) Every data state remembers the data record it was created for, and a value of a different record at the same position of a telegram is skipped instead of being written to it
-* (ChL) Name, unit and role of the data states are kept up to date, which can be switched off
+* (ChL) Name, unit and role of the data states follow the decoded telegram as long as nobody changed them; names you gave a state and states of earlier versions stay as they are, and the new option "Overwrite name, unit and role of the data states" sets them all back
 * (ChL) Fix the states of data records that a device did not have in its first telegram after a start of the adapter: they were written without being created
 * (ChL) Fix states, and devices, that were deleted in the object tree while the adapter was running: they were written without an object until the next start, and are created again by the next telegram now
 * (ChL) Count the telegram variants of every device - the layouts of data records a meter sends - and show them in the new "Telegram variants" tab of the admin UI
-* (ChL) Telegram variants can be ignored per device, so that the values of a layout nobody wants are not written
+* (ChL) Telegram variants can be ignored per device, so that the values of a layout nobody wants are not written; the log says at the start which entries of the list can never match
 
 ### 0.13.1 (2026-09-22)
 * (ChL) Convert the adapter to TypeScript
