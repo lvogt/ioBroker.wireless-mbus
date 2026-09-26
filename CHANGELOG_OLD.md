@@ -1,4 +1,9 @@
 # Older changes
+## 0.12.1 (2026-09-05)
+* (ChL) Fix Techem and Diehl (PRIOS) meters, which 0.12.0 decoded wrongly or not at all - the states it wrote for them carry wrong names and values and can be deleted
+* (ChL) Fix the adapter stopping instead of blocking a device whose telegrams keep failing to decode
+* (ChL) A 64 bit measured value with a scaling factor is a number now, like every other measured value
+
 ## 0.12.0 (2026-09-03)
 * (ChL) Replace the built-in telegram parser with the wireless-mbus-parser library
 * (ChL) New admin configuration UI (JSON config); a serial port can now simply be typed in, the separate "custom port" field is gone
