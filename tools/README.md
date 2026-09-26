@@ -119,8 +119,8 @@ for as long as you let it. `pgrep -af io.wireless-mbus` says how many are runnin
 
 The adapter is **not** restarted when the instance configuration is saved while dev-server runs
 it, so `this.config` stays at what it was when the adapter started. Anything that answers from the
-saved configuration then answers with yesterday's news - restart it after a change, by touching a
-source file in watch mode or with `./iob restart wireless-mbus.0`.
+saved configuration then answers with yesterday's news - restart it after a change with
+`touch build/main.js` (see above for why not `iob restart`).
 
 ## A busy installation
 
