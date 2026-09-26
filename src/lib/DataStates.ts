@@ -12,8 +12,10 @@
  * the value of a record that does not match it is dropped rather than written.
  *
  * The object of a record that does match is kept up to date: its name, unit
- * and role follow what the adapter would create it with today, unless the
- * instance is told to leave them alone.
+ * and role follow what the adapter would create it with today - but only as
+ * long as they are what the adapter wrote itself. A name somebody gave a state
+ * is theirs, and so is a role changed for the sake of another adapter. The
+ * instance can be told to overwrite them all the same.
  */
 
 import type { DataRecord, LegacyResult } from 'wireless-mbus-parser';
@@ -44,6 +46,11 @@ interface KnownState {
     /** undefined for a state that an adapter before this check created */
     identity: RecordIdentity | undefined;
     metadata: Partial<Record<keyof Metadata, unknown>>;
+    /**
+     * what the adapter last wrote into the metadata, kept in native.metadata -
+     * undefined for a state that an adapter before this check created
+     */
+    written: Partial<Record<keyof Metadata, unknown>> | undefined;
     /** a record that does not match is reported once per run, not with every telegram */
     mismatchReported: boolean;
 }
@@ -206,17 +213,24 @@ export function dataStateMetadata(record: LegacyDataRecord, forcekWh: boolean): 
  * @param value
  * @returns the value to compare
  */
-function comparable(key: keyof Metadata, value: unknown): unknown {
-    return key === 'unit' && (value === undefined || value === null) ? '' : value;
+function comparable(key: keyof Metadata, value: unknown): string {
+    // a name can be an object of translations
+    return JSON.stringify(key === 'unit' && (value === undefined || value === null) ? '' : value);
+}
+
+function sameMetadata(key: keyof Metadata, a: unknown, b: unknown): boolean {
+    return comparable(key, a) === comparable(key, b);
 }
 
 function knownStateOf(obj: ioBroker.Object): KnownState {
     const common = obj.common as Partial<Record<keyof Metadata, unknown>>;
     const identity: unknown = obj.native?.record;
+    const written: unknown = obj.native?.metadata;
 
     return {
         identity: isRecordIdentity(identity) ? identity : undefined,
         metadata: { name: common.name, role: common.role, unit: common.unit },
+        written: typeof written === 'object' && written !== null ? { ...written } : undefined,
         mismatchReported: false,
     };
 }
@@ -332,15 +346,26 @@ class DataStates {
                 StorageNumber: record.storageNo,
                 Tariff: record.tariff,
                 record: identity,
+                metadata,
             },
         });
 
-        this.states.set(id, { identity, metadata: { ...metadata }, mismatchReported: false });
+        this.states.set(id, {
+            identity,
+            metadata: { ...metadata },
+            written: { ...metadata },
+            mismatchReported: false,
+        });
     }
 
     /**
      * A state that an adapter before this check created takes the record that
      * arrives first as the one it stands for - there is nothing else to go by.
+     * Its metadata is taken for what the adapter wrote: whether somebody
+     * changed it cannot be told any more, so it is left as it is.
+     *
+     * A field of the metadata follows the record only while it is what the
+     * adapter wrote, unless the instance says to overwrite it.
      *
      * @param id
      * @param known
@@ -355,22 +380,40 @@ class DataStates {
             known.identity = identity;
         }
 
-        // An upgrade adds the default of a new setting to the instance, but an
-        // instance can still come without it - it is on unless it is off
-        if (this.adapter.config.updateStateObjects !== false) {
-            const common: Partial<Metadata> = {};
+        const overwrite = this.adapter.config.overwriteStateMetadata === true;
+        const hadWritten = known.written !== undefined;
+        const written = known.written ?? { ...known.metadata };
+        let writtenChanged = !hadWritten;
+        const common: Partial<Metadata> = {};
 
-            for (const key of METADATA_KEYS) {
-                if (comparable(key, known.metadata[key]) !== comparable(key, metadata[key])) {
-                    Object.assign(common, { [key]: metadata[key] });
-                    known.metadata[key] = metadata[key];
+        for (const key of METADATA_KEYS) {
+            const wanted = metadata[key];
+
+            if (sameMetadata(key, known.metadata[key], wanted)) {
+                if (!sameMetadata(key, written[key], wanted)) {
+                    written[key] = wanted;
+                    writtenChanged = true;
                 }
+                continue;
             }
 
-            if (Object.keys(common).length) {
-                this.adapter.log.debug(`Updating the object of ${id}: ${JSON.stringify(common)}`);
-                changes.common = common as ioBroker.StateCommon;
+            const untouched = hadWritten && sameMetadata(key, known.metadata[key], written[key]);
+            if (overwrite || untouched) {
+                Object.assign(common, { [key]: wanted });
+                known.metadata[key] = wanted;
+                written[key] = wanted;
+                writtenChanged = true;
             }
+        }
+
+        known.written = written;
+
+        if (Object.keys(common).length) {
+            this.adapter.log.debug(`Updating the object of ${id}: ${JSON.stringify(common)}`);
+            changes.common = common as ioBroker.StateCommon;
+        }
+        if (writtenChanged) {
+            changes.native = { ...changes.native, metadata: written };
         }
 
         if (changes.native || changes.common) {

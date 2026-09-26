@@ -17,7 +17,7 @@ const ID = 'LSE-58511882.data.2-0-VIF_VOLUME';
 function fakeAdapter(config = {}) {
     return {
         namespace: NAMESPACE,
-        config: { forcekWh: false, updateStateObjects: true, ...config },
+        config: { forcekWh: false, overwriteStateMetadata: false, ...config },
         /** @type {Record<string, any>} */
         objects: {},
         /** @type {string[]} */
@@ -124,6 +124,18 @@ describe('Data states', () => {
         dataStates = new DataStates(asAdapter, new ObjectHelper(asAdapter));
     }
 
+    /**
+     * A new start of the adapter: what is known is read from the objects
+     * again, which stay as they are.
+     *
+     * @param [config] what changes in the configuration
+     */
+    function restart(config = {}) {
+        Object.assign(adapter.config, config);
+        const asAdapter = /** @type {any} */ (adapter);
+        dataStates = new DataStates(asAdapter, new ObjectHelper(asAdapter));
+    }
+
     beforeEach(() => create());
 
     describe('a record without a state', () => {
@@ -144,6 +156,7 @@ describe('Data states', () => {
                     vifExtensions: [],
                     manufacturerSpecific: false,
                 },
+                metadata: { name: 'Volume (Instantaneous value)', role: 'value.volume', unit: 'm³' },
             });
         });
 
@@ -250,21 +263,24 @@ describe('Data states', () => {
     });
 
     describe('the metadata of a state', () => {
-        it('follows the record', async () => {
-            adapter.objects[`${NAMESPACE}.${ID}`] = oldObject({ name: 'Volume', role: 'value', unit: 'l' });
+        /** a state the adapter created, as the record it stands for describes it */
+        async function created(record = legacyRecord()) {
+            await dataStates.verify('LSE-58511882', record, parsedRecord());
+            restart();
+        }
 
-            await dataStates.verify('LSE-58511882', legacyRecord(), parsedRecord());
+        it('follows the record while it is what the adapter wrote', async () => {
+            await created();
 
-            expect(adapter.object(ID).common).to.include({
-                name: 'Volume (Instantaneous value)',
-                role: 'value.volume',
-                unit: 'm³',
-            });
+            await dataStates.verify('LSE-58511882', legacyRecord({ description: 'Water volume' }), parsedRecord());
+
+            expect(adapter.object(ID).common.name).to.equal('Water volume (Instantaneous value)');
+            expect(adapter.object(ID).native.metadata.name).to.equal('Water volume (Instantaneous value)');
         });
 
         it('follows the kWh option', async () => {
-            create({ forcekWh: true });
-            adapter.objects[`${NAMESPACE}.${ID}`] = oldObject({ unit: 'Wh', role: 'value.power.consumption' });
+            await created(legacyRecord({ unit: 'Wh', description: 'Energy' }));
+            restart({ forcekWh: true });
 
             await dataStates.verify(
                 'LSE-58511882',
@@ -275,10 +291,59 @@ describe('Data states', () => {
             expect(adapter.object(ID).common.unit).to.equal('kWh');
         });
 
+        it('keeps a name somebody gave the state, while the rest follows the record', async () => {
+            await created();
+            adapter.object(ID).common.name = 'My water meter';
+            adapter.object(ID).common.role = 'value.water';
+            restart();
+
+            await dataStates.verify('LSE-58511882', legacyRecord({ unit: 'l' }), parsedRecord());
+
+            expect(adapter.object(ID).common).to.include({ name: 'My water meter', role: 'value.water', unit: 'l' });
+        });
+
+        it('keeps a name of translations somebody gave the state', async () => {
+            await created();
+            adapter.object(ID).common.name = { en: 'Water', de: 'Wasser' };
+            restart();
+
+            await dataStates.verify('LSE-58511882', legacyRecord({ description: 'Water volume' }), parsedRecord());
+
+            expect(adapter.object(ID).common.name).to.eql({ en: 'Water', de: 'Wasser' });
+        });
+
+        it('is left as it is for a state an earlier version created, which takes it for its own', async () => {
+            adapter.objects[`${NAMESPACE}.${ID}`] = oldObject({ name: 'Volume', role: 'value', unit: 'l' });
+
+            await dataStates.verify('LSE-58511882', legacyRecord(), parsedRecord());
+
+            expect(adapter.object(ID).common).to.include({ name: 'Volume', role: 'value', unit: 'l' });
+            expect(adapter.object(ID).native.metadata).to.eql({ name: 'Volume', role: 'value', unit: 'l' });
+
+            // and follows the record from then on, as long as nobody changes it
+            await dataStates.verify('LSE-58511882', legacyRecord({ description: 'Water volume' }), parsedRecord());
+            expect(adapter.object(ID).common.name).to.equal('Water volume (Instantaneous value)');
+        });
+
+        it('is overwritten when the instance says so, names somebody gave the state included', async () => {
+            adapter.objects[`${NAMESPACE}.${ID}`] = oldObject({ name: 'My water meter', role: 'value', unit: 'l' });
+            restart({ overwriteStateMetadata: true });
+
+            await dataStates.verify('LSE-58511882', legacyRecord(), parsedRecord());
+
+            expect(adapter.object(ID).common).to.include({
+                name: 'Volume (Instantaneous value)',
+                role: 'value.volume',
+                unit: 'm³',
+            });
+            expect(adapter.object(ID).native.metadata.unit).to.equal('m³');
+        });
+
         it('is taken as it is when there is no unit either way', async () => {
             const obj = /** @type {any} */ (oldObject({ name: 'Model version (Instantaneous value)', role: 'value' }));
             delete obj.common.unit;
             adapter.objects[`${NAMESPACE}.${ID}`] = obj;
+            restart({ overwriteStateMetadata: true });
 
             await dataStates.verify(
                 'LSE-58511882',
@@ -287,26 +352,6 @@ describe('Data states', () => {
             );
 
             expect(adapter.object(ID).common).to.not.have.property('unit');
-        });
-
-        it('follows the record for an instance that does not have the setting yet', async () => {
-            create();
-            delete adapter.config.updateStateObjects;
-            adapter.objects[`${NAMESPACE}.${ID}`] = oldObject({ unit: 'l' });
-
-            await dataStates.verify('LSE-58511882', legacyRecord(), parsedRecord());
-
-            expect(adapter.object(ID).common.unit).to.equal('m³');
-        });
-
-        it('is left alone when the instance says so, while the record is still stored', async () => {
-            create({ updateStateObjects: false });
-            adapter.objects[`${NAMESPACE}.${ID}`] = oldObject({ name: 'My water meter', unit: 'l' });
-
-            await dataStates.verify('LSE-58511882', legacyRecord(), parsedRecord());
-
-            expect(adapter.object(ID).common).to.include({ name: 'My water meter', unit: 'l' });
-            expect(adapter.object(ID).native.record).to.be.an('object');
         });
     });
 

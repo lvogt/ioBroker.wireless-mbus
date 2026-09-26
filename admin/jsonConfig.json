@@ -125,10 +125,10 @@
                     "lg": 4,
                     "xl": 4
                 },
-                "updateStateObjects": {
+                "overwriteStateMetadata": {
                     "type": "checkbox",
-                    "label": "Keep name, unit and role of the states up to date",
-                    "help": "updateStateObjectsHelp",
+                    "label": "Overwrite name, unit and role of the data states",
+                    "help": "overwriteStateMetadataHelp",
                     "newLine": true,
                     "xs": 12,
                     "sm": 12,

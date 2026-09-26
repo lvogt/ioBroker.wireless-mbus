@@ -489,7 +489,8 @@ tests.integration(path.join(__dirname, '..'), {
 
                 await prepareAdapter(harness);
                 // the volume as a version of the adapter before the check
-                // left it behind: no record of its own, and a wrong unit
+                // left it behind: no record of its own, and a unit and name
+                // that are not what the adapter would create it with
                 await createDeviceObject(harness, 'LSE-58511882');
                 await setObject(harness, {
                     _id: volumeId,
@@ -513,8 +514,11 @@ tests.integration(path.join(__dirname, '..'), {
                     vifExtensions: [],
                     manufacturerSpecific: false,
                 });
-                expect(obj.common.unit).to.equal('m³');
-                expect(obj.common.name).to.equal('Volume (Instantaneous value)');
+                // nobody can tell any more whether somebody changed them, so
+                // they are taken for what the adapter wrote
+                expect(obj.common.unit).to.equal('l');
+                expect(obj.common.name).to.equal('Volume');
+                expect(obj.native.metadata).to.eql({ name: 'Volume', role: 'value', unit: 'l' });
 
                 const state = await getState(harness, volumeId);
                 expect(state.val).to.be.closeTo(1.234, 0.001);

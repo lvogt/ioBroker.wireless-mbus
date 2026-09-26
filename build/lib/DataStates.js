@@ -115,15 +115,20 @@ function dataStateMetadata(record, forcekWh) {
   return { name, role, unit };
 }
 function comparable(key, value) {
-  return key === "unit" && (value === void 0 || value === null) ? "" : value;
+  return JSON.stringify(key === "unit" && (value === void 0 || value === null) ? "" : value);
+}
+function sameMetadata(key, a, b) {
+  return comparable(key, a) === comparable(key, b);
 }
 function knownStateOf(obj) {
-  var _a;
+  var _a, _b;
   const common = obj.common;
   const identity = (_a = obj.native) == null ? void 0 : _a.record;
+  const written = (_b = obj.native) == null ? void 0 : _b.metadata;
   return {
     identity: isRecordIdentity(identity) ? identity : void 0,
     metadata: { name: common.name, role: common.role, unit: common.unit },
+    written: typeof written === "object" && written !== null ? { ...written } : void 0,
     mismatchReported: false
   };
 }
@@ -223,14 +228,25 @@ class DataStates {
         id: id.substring(id.indexOf(".")),
         StorageNumber: record.storageNo,
         Tariff: record.tariff,
-        record: identity
+        record: identity,
+        metadata
       }
     });
-    this.states.set(id, { identity, metadata: { ...metadata }, mismatchReported: false });
+    this.states.set(id, {
+      identity,
+      metadata: { ...metadata },
+      written: { ...metadata },
+      mismatchReported: false
+    });
   }
   /**
    * A state that an adapter before this check created takes the record that
    * arrives first as the one it stands for - there is nothing else to go by.
+   * Its metadata is taken for what the adapter wrote: whether somebody
+   * changed it cannot be told any more, so it is left as it is.
+   *
+   * A field of the metadata follows the record only while it is what the
+   * adapter wrote, unless the instance says to overwrite it.
    *
    * @param id
    * @param known
@@ -238,23 +254,41 @@ class DataStates {
    * @param metadata
    */
   async update(id, known, identity, metadata) {
+    var _a;
     const changes = {};
     if (!known.identity) {
       changes.native = { record: identity };
       known.identity = identity;
     }
-    if (this.adapter.config.updateStateObjects !== false) {
-      const common = {};
-      for (const key of METADATA_KEYS) {
-        if (comparable(key, known.metadata[key]) !== comparable(key, metadata[key])) {
-          Object.assign(common, { [key]: metadata[key] });
-          known.metadata[key] = metadata[key];
+    const overwrite = this.adapter.config.overwriteStateMetadata === true;
+    const hadWritten = known.written !== void 0;
+    const written = (_a = known.written) != null ? _a : { ...known.metadata };
+    let writtenChanged = !hadWritten;
+    const common = {};
+    for (const key of METADATA_KEYS) {
+      const wanted = metadata[key];
+      if (sameMetadata(key, known.metadata[key], wanted)) {
+        if (!sameMetadata(key, written[key], wanted)) {
+          written[key] = wanted;
+          writtenChanged = true;
         }
+        continue;
       }
-      if (Object.keys(common).length) {
-        this.adapter.log.debug(`Updating the object of ${id}: ${JSON.stringify(common)}`);
-        changes.common = common;
+      const untouched = hadWritten && sameMetadata(key, known.metadata[key], written[key]);
+      if (overwrite || untouched) {
+        Object.assign(common, { [key]: wanted });
+        known.metadata[key] = wanted;
+        written[key] = wanted;
+        writtenChanged = true;
       }
+    }
+    known.written = written;
+    if (Object.keys(common).length) {
+      this.adapter.log.debug(`Updating the object of ${id}: ${JSON.stringify(common)}`);
+      changes.common = common;
+    }
+    if (writtenChanged) {
+      changes.native = { ...changes.native, metadata: written };
     }
     if (changes.native || changes.common) {
       await this.objectHelper.updateObject(id, changes);
