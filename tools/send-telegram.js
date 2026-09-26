@@ -30,6 +30,20 @@ const SAMPLES = {
         containsCrc: false,
         data: '2C446532821851582C067AE1000000046D1906D9180C1334120000426CBF1C4C1300000000326CFFFF01FD7300',
     },
+    'plain-maximum': {
+        description:
+            'LSE-58511882 again, a maximum volume where "plain" has the current one - same state id, other record',
+        frameType: 'A',
+        containsCrc: false,
+        data: '2C446532821851582C067AE1000000046D1906D9181C1378560000426CBF1C4C1300000000326CFFFF01FD7300',
+    },
+    'plain-other': {
+        description:
+            'LSE-58511882 again, a fabrication number and two temperatures in place of three records of "plain"',
+        frameType: 'A',
+        containsCrc: false,
+        data: '2C446532821851582C067AE10000000C78785634120C1334120000025B16000C5F12000000326CFFFF01FD7300',
+    },
     volume: {
         description: 'CEN-12345678, a volume in m³, frame type B',
         frameType: 'B',
@@ -178,7 +192,12 @@ async function main() {
     }
 }
 
-main().catch(error => {
-    console.error(`${error}`);
-    process.exit(1);
-});
+// tools/seed-dev-server.js sends the samples as well
+module.exports = { SAMPLES, sendOverTcp };
+
+if (require.main === module) {
+    main().catch(error => {
+        console.error(`${error}`);
+        process.exit(1);
+    });
+}
