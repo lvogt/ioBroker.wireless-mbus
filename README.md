@@ -153,7 +153,9 @@ device, with the kind of frames, how many telegrams were seen, when it was seen 
 the states its records are written to. None of the variants is treated as the better one - a value
 of each goes to the state of its own record. If you do not want the values of a variant at all,
 enter the device address and the variant in the list of ignored telegram variants: its telegrams
-are dropped once they are decoded, and they are still counted in the table.
+are dropped once they are decoded, and they are still counted in the table. The device address is
+the full one, with the manufacturer code (`LSE-58511882`, not `58511882`); the log says so at the
+start for a row that can never match.
 
 ## Updating from 0.11.x
 

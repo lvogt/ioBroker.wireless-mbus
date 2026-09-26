@@ -30,6 +30,12 @@ const MAX_VARIANTS_PER_DEVICE = 8;
  */
 const PERSIST_INTERVAL = 60 * 60 * 1000;
 
+/**
+ * What a device address looks like: the manufacturer code and the ID of the
+ * meter, which the parser writes as eight hex digits.
+ */
+const DEVICE_ADDRESS = /^[A-Z]{3}-[0-9A-Fa-f]{8}$/;
+
 export type FrameKind = 'full' | 'compact';
 
 export interface TelegramVariant {
@@ -95,6 +101,33 @@ function keyOfRow(row: IgnoredVariantRow): string | undefined {
 }
 
 /**
+ * A row that cannot match any telegram is left out without a word otherwise,
+ * and the easy mistake is the ID of the meter without its manufacturer code -
+ * which is what the meter itself has printed on it.
+ *
+ * @param row
+ * @returns why the row can never match, or undefined for one that can - and
+ * for an empty one, which the table leaves behind when a row is added and not
+ * filled in
+ */
+export function problemOfRow(row: IgnoredVariantRow): string | undefined {
+    const id = String(row?.id ?? '').trim();
+    const variant = String(row?.variant ?? '').trim();
+
+    if (!id && !variant) {
+        return undefined;
+    }
+    if (!DEVICE_ADDRESS.test(id)) {
+        return `"${id}" is no device address, which is the manufacturer code and the ID, e.g. LSE-58511882`;
+    }
+    if (keyOfRow(row) === undefined) {
+        return `"${variant}" is no variant, which is the hex number the table of telegram variants shows, e.g. 3A7F`;
+    }
+
+    return undefined;
+}
+
+/**
  * Whatever ended up in the native part of a device object - written by a
  * newer version of the adapter, or edited by somebody - is only taken for a
  * variant if it is one.
@@ -134,9 +167,21 @@ class TelegramVariants {
     /** "<device id>/<variant>" of every variant the configuration ignores */
     private readonly ignored: Set<string>;
 
-    constructor(ignored: IgnoredVariantRow[] | undefined) {
+    /**
+     * @param ignored the configured list of variants to ignore
+     * @param log where a row that can never match is reported - the rows of
+     * the open form in the admin UI are read without one
+     */
+    constructor(ignored: IgnoredVariantRow[] | undefined, log?: ioBroker.Logger) {
         this.devices = new Map();
         this.ignored = TelegramVariants.keysOf(ignored);
+
+        for (const row of Array.isArray(ignored) ? ignored : []) {
+            const problem = problemOfRow(row);
+            if (problem && log) {
+                log.warn(`An ignored telegram variant is left out: ${problem}`);
+            }
+        }
     }
 
     private static keysOf(rows: IgnoredVariantRow[] | undefined): Set<string> {

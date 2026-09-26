@@ -2,7 +2,7 @@
 
 const { expect } = require('chai');
 const TelegramVariants = require('../src/lib/TelegramVariants').default;
-const { MAX_VARIANTS_PER_DEVICE, PERSIST_INTERVAL, variantName } = require('../src/lib/TelegramVariants');
+const { MAX_VARIANTS_PER_DEVICE, PERSIST_INTERVAL, problemOfRow, variantName } = require('../src/lib/TelegramVariants');
 
 const DEVICE = 'LSE-58511882';
 const STATES = ['1-0-VIF_TIME_POINT_DATE_TIME', '2-0-VIF_VOLUME'];
@@ -140,6 +140,32 @@ describe('Telegram variants', () => {
 
             expect(variants.isIgnored(DEVICE, 0x3a7f)).to.be.false;
             expect(variants.isIgnored('', 0x3a7f)).to.be.false;
+        });
+
+        it('are reported when they can never match', () => {
+            const warnings = [];
+            const log = /** @type {any} */ ({ warn: message => warnings.push(message) });
+
+            new TelegramVariants(
+                [
+                    { id: '58511882', variant: '7EA2' },
+                    { id: DEVICE, variant: 'xyz' },
+                    { id: DEVICE, variant: '7EA2' },
+                    {},
+                ],
+                log,
+            );
+
+            expect(warnings).to.have.lengthOf(2);
+            expect(warnings[0]).to.include('"58511882" is no device address');
+            expect(warnings[1]).to.include('"xyz" is no variant');
+        });
+
+        it('know what is wrong with them', () => {
+            expect(problemOfRow({ id: 'lse-58511882', variant: '7EA2' })).to.include('no device address');
+            expect(problemOfRow({ id: DEVICE, variant: '' })).to.include('no variant');
+            expect(problemOfRow({ id: 'KAM-6072350a', variant: '0x1f' })).to.be.undefined;
+            expect(problemOfRow({ id: ' ', variant: '' })).to.be.undefined;
         });
 
         it('can be missing altogether', () => {
