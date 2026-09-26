@@ -21,11 +21,13 @@ __export(TelegramVariants_exports, {
   MAX_VARIANTS_PER_DEVICE: () => MAX_VARIANTS_PER_DEVICE,
   PERSIST_INTERVAL: () => PERSIST_INTERVAL,
   default: () => TelegramVariants_default,
+  problemOfRow: () => problemOfRow,
   variantName: () => variantName
 });
 module.exports = __toCommonJS(TelegramVariants_exports);
 const MAX_VARIANTS_PER_DEVICE = 8;
 const PERSIST_INTERVAL = 60 * 60 * 1e3;
+const DEVICE_ADDRESS = /^[A-Z]{3}-[0-9A-Fa-f]{8}$/;
 function variantName(crc) {
   return crc.toString(16).toUpperCase().padStart(4, "0");
 }
@@ -37,6 +39,21 @@ function keyOfRow(row) {
     return void 0;
   }
   return `${id}/${variant.padStart(4, "0")}`;
+}
+function problemOfRow(row) {
+  var _a, _b;
+  const id = String((_a = row == null ? void 0 : row.id) != null ? _a : "").trim();
+  const variant = String((_b = row == null ? void 0 : row.variant) != null ? _b : "").trim();
+  if (!id && !variant) {
+    return void 0;
+  }
+  if (!DEVICE_ADDRESS.test(id)) {
+    return `"${id}" is no device address, which is the manufacturer code and the ID, e.g. LSE-58511882`;
+  }
+  if (keyOfRow(row) === void 0) {
+    return `"${variant}" is no variant, which is the hex number the table of telegram variants shows, e.g. 3A7F`;
+  }
+  return void 0;
 }
 function isVariant(value) {
   const variant = value;
@@ -51,9 +68,20 @@ class TelegramVariants {
   devices;
   /** "<device id>/<variant>" of every variant the configuration ignores */
   ignored;
-  constructor(ignored) {
+  /**
+   * @param ignored the configured list of variants to ignore
+   * @param log where a row that can never match is reported - the rows of
+   * the open form in the admin UI are read without one
+   */
+  constructor(ignored, log) {
     this.devices = /* @__PURE__ */ new Map();
     this.ignored = TelegramVariants.keysOf(ignored);
+    for (const row of Array.isArray(ignored) ? ignored : []) {
+      const problem = problemOfRow(row);
+      if (problem && log) {
+        log.warn(`An ignored telegram variant is left out: ${problem}`);
+      }
+    }
   }
   static keysOf(rows) {
     const keys = Array.isArray(rows) ? rows.map(keyOfRow) : [];
@@ -164,6 +192,7 @@ var TelegramVariants_default = TelegramVariants;
 0 && (module.exports = {
   MAX_VARIANTS_PER_DEVICE,
   PERSIST_INTERVAL,
+  problemOfRow,
   variantName
 });
 //# sourceMappingURL=TelegramVariants.js.map

@@ -188,7 +188,7 @@ class WirelessMbus extends utils.Adapter {
 
         this.aesKeys = new AesKeys(this.config.aeskeys, this.log);
         this.blockList = new BlockList(this.config.blacklist, { auto: this.config.autoBlocklist }, this.log);
-        this.telegramVariants = new TelegramVariants(this.config.ignoredVariants);
+        this.telegramVariants = new TelegramVariants(this.config.ignoredVariants, this.log);
         this.adminMessages = new AdminMessages(this, this.aesKeys, this.telegramVariants);
 
         this.loadManufacturerSpecificDescriptions();
