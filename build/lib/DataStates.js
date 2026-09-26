@@ -182,6 +182,16 @@ class DataStates {
     await this.update(id, known, identity, metadata);
     return true;
   }
+  /**
+   * Drop what is known about a state whose object was deleted, so that the
+   * next record for it creates it again instead of writing a value that has
+   * no object.
+   *
+   * @param id relative to the namespace of the instance
+   */
+  forget(id) {
+    this.states.delete(id);
+  }
   async read(id) {
     let obj;
     try {

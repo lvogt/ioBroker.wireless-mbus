@@ -49,6 +49,14 @@ class DeviceRegistry {
     }
   }
   /**
+   * Forget a device whose object tree was deleted.
+   *
+   * @param deviceId
+   */
+  remove(deviceId) {
+    this.devices.delete(deviceId);
+  }
+  /**
    * @param deviceId
    * @returns whether the device has an object tree
    */
