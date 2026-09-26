@@ -147,6 +147,16 @@ describe('Data states', () => {
             });
         });
 
+        it('gets a state again after its object was deleted', async () => {
+            await dataStates.verify('LSE-58511882', legacyRecord(), parsedRecord());
+            delete adapter.objects[`${NAMESPACE}.${ID}`];
+
+            dataStates.forget(ID);
+            await dataStates.verify('LSE-58511882', legacyRecord(), parsedRecord());
+
+            expect(adapter.object(ID)).to.be.an('object');
+        });
+
         it('is only looked up once', async () => {
             await dataStates.verify('LSE-58511882', legacyRecord(), parsedRecord());
             await dataStates.verify('LSE-58511882', legacyRecord(), parsedRecord());

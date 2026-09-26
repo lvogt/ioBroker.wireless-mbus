@@ -38,6 +38,15 @@ describe('Device registry', () => {
         expect(registry.has('CEN-11111111')).to.be.false;
     });
 
+    it('forgets a device whose object tree was deleted', () => {
+        registry.learnLayout('KAM-60723506', layout(33501));
+
+        registry.remove('KAM-60723506');
+
+        expect(registry.has('KAM-60723506')).to.be.false;
+        expect(registry.layouts()).to.be.empty;
+    });
+
     it('keeps one layout per header signature', () => {
         expect(registry.learnLayout('KAM-60723506', layout(33501))).to.be.true;
         expect(registry.learnLayout('KAM-60723506', layout(33501))).to.be.false;

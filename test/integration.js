@@ -126,6 +126,12 @@ function setObject(harness, obj) {
     });
 }
 
+function delObject(harness, id) {
+    return new Promise((resolve, reject) => {
+        harness.objects.delObject(id, err => (err ? reject(new Error(`Error return ${err}`)) : resolve(true)));
+    });
+}
+
 function getState(harness, id) {
     return new Promise((resolve, reject) => {
         harness.states.getState(id, (err, state) => (err ? reject(new Error(`Error return ${err}`)) : resolve(state)));
@@ -533,6 +539,22 @@ tests.integration(path.join(__dirname, '..'), {
 
                 const state = await getState(harness, temperatureId);
                 expect(state.val).to.equal(1234);
+            }).timeout(15000);
+
+            it('creates a state again that was deleted while the adapter runs', async () => {
+                const temperatureId = 'wireless-mbus.0.LSE-58511882.data.2-0-VIF_FLOW_TEMP';
+                await delObject(harness, temperatureId);
+                await delObject(harness, 'wireless-mbus.0.LSE-58511882');
+                await delay(500);
+
+                await sendTelegram({ frameType: 'A', containsCrc: false, data: flowTemperature });
+                await delay(2000);
+
+                const obj = await getObject(harness, temperatureId);
+                expect(obj, 'the deleted state was not created again').to.not.be.null;
+                const device = await getObject(harness, 'wireless-mbus.0.LSE-58511882');
+                expect(device, 'the deleted device was not created again').to.not.be.null;
+                expect(device.type).to.equal('device');
             }).timeout(15000);
         });
 

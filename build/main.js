@@ -69,6 +69,7 @@ class WirelessMbus extends utils.Adapter {
     this.on("ready", this.onReady.bind(this));
     this.on("message", this.onMessage.bind(this));
     this.on("unload", this.onUnload.bind(this));
+    this.on("objectChange", this.onObjectChange.bind(this));
     this.objectHelper = new import_ObjectHelper.default(this);
     this.dataStates = new import_DataStates.default(this, this.objectHelper);
     this.receiverConnected = void 0;
@@ -135,6 +136,7 @@ class WirelessMbus extends utils.Adapter {
     this.adminMessages = new import_AdminMessages.default(this, this.aesKeys);
     this.loadManufacturerSpecificDescriptions();
     await this.loadKnownDevices();
+    await this.subscribeObjectsAsync("*");
     await this.setConnected(false);
     await this.connectReceiver();
   }
@@ -466,6 +468,42 @@ class WirelessMbus extends utils.Adapter {
         this.log.debug(`Value ${name}: ${val}`);
         await this.objectHelper.updateState(name, val);
       }
+    }
+  }
+  /**
+   * An object of the instance was deleted - by somebody in the object tree,
+   * as the adapter itself deletes nothing.
+   *
+   * What the adapter knows about the objects it created is only read at the
+   * start, and without this a deleted state was written to without an object
+   * until the next one. Now the next telegram of the device creates what is
+   * missing again: the device objects, as they are set up for a device that
+   * is new in this run, and the data states, which are checked with every
+   * telegram anyway.
+   *
+   * A deleted device is forgotten as well. With "ignoreUnknownDevices" on it
+   * stays gone right away rather than after the next start, and otherwise the
+   * next telegram brings it back like any device that is new.
+   *
+   * @param id
+   * @param obj undefined or null for a deleted object
+   */
+  onObjectChange(id, obj) {
+    const prefix = `${this.namespace}.`;
+    if (obj || !id.startsWith(prefix)) {
+      return;
+    }
+    const relativeId = id.substring(prefix.length);
+    const deviceId = relativeId.split(".")[0];
+    if (deviceId === "info") {
+      return;
+    }
+    this.createdDevices.delete(deviceId);
+    this.dataStates.forget(relativeId);
+    delete this.stateValues[relativeId];
+    if (relativeId === deviceId) {
+      this.log.debug(`The object tree of ${deviceId} was deleted`);
+      this.deviceRegistry.remove(deviceId);
     }
   }
   onMessage(obj) {

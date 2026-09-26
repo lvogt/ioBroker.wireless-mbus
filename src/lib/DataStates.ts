@@ -281,6 +281,17 @@ class DataStates {
         return true;
     }
 
+    /**
+     * Drop what is known about a state whose object was deleted, so that the
+     * next record for it creates it again instead of writing a value that has
+     * no object.
+     *
+     * @param id relative to the namespace of the instance
+     */
+    forget(id: string): void {
+        this.states.delete(id);
+    }
+
     async read(id: string): Promise<KnownState | undefined> {
         let obj: ioBroker.Object | null | undefined;
 
