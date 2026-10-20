@@ -39,6 +39,7 @@ const TELEGRAM_LINE = 98;
 const FRAME_TYPE_B_LINE = 89;
 const FRAME_TYPE_A = 1;
 const FRAME_TYPE_B = 0;
+const LQI_AND_RSSI_SIZE = 2;
 const STALE_DATA_TIMEOUT = 100;
 class CulReceiver extends import_SerialDevice.default {
   constructor(options, mode, onMessage, onError, loggerFunction) {
@@ -100,11 +101,17 @@ class CulReceiver extends import_SerialDevice.default {
   isTelegramMessage(messageBuffer) {
     return messageBuffer[0] === FRAME_TYPE_A || messageBuffer[0] === FRAME_TYPE_B;
   }
+  /**
+   * With the data reporting of "X21" culfw appends two bytes to a telegram,
+   * the LQI and then the RSSI. Only the RSSI used to be taken off, so the
+   * LQI stayed at the end of the telegram. The parser takes data behind a
+   * frame of type B for a frame of type A and fails on its CRC (issue #325).
+   */
   parseRawMessage(messageBuffer) {
     let rssi = messageBuffer[messageBuffer.length - 1];
     rssi = rssi >= 128 ? (rssi - 256) / 2 - 74 : rssi / 2 - 74;
     const frameType = messageBuffer[0] === FRAME_TYPE_B ? "B" : "A";
-    const payload = messageBuffer.subarray(1, messageBuffer.length - 1);
+    const payload = messageBuffer.subarray(1, messageBuffer.length - LQI_AND_RSSI_SIZE);
     return {
       frameType,
       containsCrc: true,

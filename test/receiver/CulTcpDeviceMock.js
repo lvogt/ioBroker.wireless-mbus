@@ -4,6 +4,9 @@ const net = require('node:net');
 
 const IS_DEBUG = process.env.DEBUG === 'true';
 
+// What the LQI of a telegram reads, in hex
+const LQI = '5a';
+
 class CulTcpDeviceMock {
     constructor(options) {
         this.options = options;
@@ -51,7 +54,8 @@ class CulTcpDeviceMock {
     sendTelegram(dataString, rssi, frameType) {
         frameType = typeof frameType !== 'undefined' ? frameType.toUpperCase() : 'A';
         const prefix = `b${frameType === 'B' ? 'Y' : ''}`;
-        const hexString = `${prefix + dataString + (rssi != null ? rssi.toString(16).padStart(2, '0') : '00')}\r\n`;
+        // With "X21" culfw appends the LQI and the RSSI to every telegram
+        const hexString = `${prefix + dataString + LQI + (rssi != null ? rssi.toString(16).padStart(2, '0') : '00')}\r\n`;
         if (this.socket) {
             this.socket.write(Buffer.from(hexString));
         }

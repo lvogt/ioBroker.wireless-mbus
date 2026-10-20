@@ -203,6 +203,9 @@ battery life of a PRIOS meter is reported in months rather than in years.
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (ChL) Fix the CUL receiver leaving the LQI at the end of every telegram: culfw appends the LQI and the RSSI, but only the RSSI was taken off. Telegrams of frame type B then failed with "Telegram data is too short!" and the meter was blocked after 10 of them (#325)
+
 ### 0.14.0 (2026-09-26)
 * (ChL) Every data state remembers the data record it was created for, and a value of a different record at the same position of a telegram is skipped instead of being written to it
 * (ChL) Name, unit and role of the data states follow the decoded telegram as long as nobody changed them; names you gave a state and states of earlier versions stay as they are, and the new option "Overwrite name, unit and role of the data states" sets them all back
