@@ -2,6 +2,9 @@
 
 const DeviceMock = require('./DeviceMock');
 
+// What the LQI of a telegram reads, in hex
+const LQI = '5a';
+
 // The commands a-culfw lists when it does not know the one it was given
 const CULFW_COMMANDS = 'B b C e F G K l M R T t V W X x';
 
@@ -73,7 +76,8 @@ class CulDeviceMock extends DeviceMock {
     sendTelegram(dataString, rssi, frameType) {
         frameType = typeof frameType !== 'undefined' ? frameType.toUpperCase() : 'A';
         const prefix = `b${frameType === 'B' ? 'Y' : ''}`;
-        const hexString = `${prefix + dataString + (rssi != null ? rssi.toString(16).padStart(2, '0') : '00')}\r\n`;
+        // With "X21" culfw appends the LQI and the RSSI to every telegram
+        const hexString = `${prefix + dataString + LQI + (rssi != null ? rssi.toString(16).padStart(2, '0') : '00')}\r\n`;
         this.sendData(Buffer.from(hexString));
     }
 }

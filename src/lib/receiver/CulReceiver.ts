@@ -17,6 +17,9 @@ const FRAME_TYPE_B_LINE = 0x59; // 'Y' - marks a type B frame in such a line
 const FRAME_TYPE_A = 0x01;
 const FRAME_TYPE_B = 0x00;
 
+// The LQI and RSSI bytes at the end of a telegram line
+const LQI_AND_RSSI_SIZE = 2;
+
 // How long to wait for the rest of the line that was already being sent when
 // the port was opened, before dropping it (msec)
 const STALE_DATA_TIMEOUT = 100;
@@ -104,12 +107,18 @@ class CulReceiver extends SerialDevice {
         return messageBuffer[0] === FRAME_TYPE_A || messageBuffer[0] === FRAME_TYPE_B;
     }
 
+    /**
+     * With the data reporting of "X21" culfw appends two bytes to a telegram,
+     * the LQI and then the RSSI. Only the RSSI used to be taken off, so the
+     * LQI stayed at the end of the telegram. The parser takes data behind a
+     * frame of type B for a frame of type A and fails on its CRC (issue #325).
+     */
     parseRawMessage(messageBuffer: Buffer): ReceivedTelegram {
         let rssi = messageBuffer[messageBuffer.length - 1];
         rssi = rssi >= 0x80 ? (rssi - 0x100) / 2 - 74 : rssi / 2 - 74;
 
         const frameType = messageBuffer[0] === FRAME_TYPE_B ? 'B' : 'A';
-        const payload = messageBuffer.subarray(1, messageBuffer.length - 1);
+        const payload = messageBuffer.subarray(1, messageBuffer.length - LQI_AND_RSSI_SIZE);
 
         return {
             frameType: frameType,

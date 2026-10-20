@@ -11,6 +11,7 @@ const HciMessage = require('../../src/lib/receiver/HciMessage').default;
 const ImstReceiver = require('../../src/lib/receiver/ImstReceiver').default;
 const SimpleReceiver = require('../../src/lib/receiver/SimpleReceiver').default;
 const TcpReceiver = require('../../src/lib/receiver/TcpReceiver').default;
+const { WirelessMbusParser } = require('wireless-mbus-parser');
 
 /*
  * Framing tests for the receivers other than IMSTv2 (see imstv2-framing.test.js
@@ -281,7 +282,8 @@ describe('EMBIT framing', () => {
 });
 
 describe('CUL framing', () => {
-    const line = rssi => `b${telegram}${rssi}\r\n`;
+    // culfw appends the LQI and the RSSI to a telegram
+    const line = rssi => `b${telegram}5a${rssi}\r\n`;
 
     it('extracts every telegram of a chunk that holds more than one line', () => {
         const cul = createReceiver(CulReceiver, 'T');
@@ -303,6 +305,33 @@ describe('CUL framing', () => {
         cul.receive(complete.slice(20));
         expect(cul.messages).to.have.lengthOf(1);
         expect(cul.messages[0].rawData).to.eql(Buffer.from(telegram, 'hex'));
+    });
+
+    // The LQI used to stay at the end of the telegram. Behind a frame of type
+    // B the parser takes such a byte for the start of a frame of type A, whose
+    // CRCs it then misses: "Telegram data is too short! Expected at least 81
+    // bytes, but got only 72" (issue #325)
+    it('hands a frame of type B to the parser without the LQI and RSSI behind it', async () => {
+        // The line of the issue, with another meter ID and the CRC to match
+        const frameTypeB =
+            '464497266352781500047A140030A58CD8F12ACDA77A50D20F64EF24874BF52090DECEBC3FFAA7C278F63119CF5A64508D4584536629A33F099B5C11EFD5E60C79612349259B54';
+        const cul = createReceiver(CulReceiver, 'C');
+
+        cul.receive(`bY${frameTypeB}812D\r\n`);
+
+        expect(cul.messages).to.have.lengthOf(1);
+        const message = cul.messages[0];
+        expect(message.frameType).to.equal('B');
+        expect(message.rawData).to.eql(Buffer.from(frameTypeB, 'hex'));
+        expect(message.rssi).to.equal(-51.5);
+
+        // The telegram is encrypted: without the key the parser stops behind
+        // the CRC check, which is the one that failed
+        const error = await new WirelessMbusParser().parse(message.rawData, { containsCrc: message.containsCrc }).then(
+            () => null,
+            error => error,
+        );
+        expect(error).to.have.property('name', 'NO_AES_KEY');
     });
 
     it('does not mix up a response and a telegram that share a chunk', () => {
